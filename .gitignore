@@ -32,6 +32,12 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# Public build-time config (NEXT_PUBLIC_* only, no secrets) — committed on purpose:
+# without it a fresh build bakes the localhost:8080 fallback into the bundle.
+!.env.production
+
+# QA screenshots from emulator/browser test sessions — not part of the app
+/public-shots/
 
 # vercel
 .vercel

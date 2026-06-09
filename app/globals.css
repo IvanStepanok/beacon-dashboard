@@ -1,26 +1,38 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Beacon design tokens (mirror the mobile app) — trauma-informed damage palette. */
+@theme {
+  --color-primary: #6e4fc4;
+  --color-primary-soft: #e6dcf6;
+  --color-primary-ink: #3a2470;
+  --color-bg: #faf8fd;
+  --color-surface: #ffffff;
+  --color-surface2: #f2eef8;
+  --color-ink: #2c2733;
+  --color-ink2: #5c5567;
+  --color-ink3: #8b8497;
+  --color-line: #e4dfea;
+  --color-ok: #3fa463;
+  --color-ok-soft: #dcf1e3;
+  --color-warn: #d49a2a;
+  --color-warn-soft: #f6ecd6;
+  --color-complete: #b66250;
+  --color-complete-soft: #f4e6e2;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, monospace;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* MapLibre attribution tweak */
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
 }
