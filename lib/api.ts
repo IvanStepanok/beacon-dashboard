@@ -1,6 +1,6 @@
 // Typed client for the Beacon Go backend (browser-side; carries the analyst JWT).
 import type {
-  AreaGroup, Crisis, Report, TaskStatus, Severity, Disposition, Verification,
+  AreaGroup, Crisis, Report, Verification,
   FormSchema, FormOverrides,
 } from "./types";
 
@@ -74,8 +74,6 @@ export interface StatsOverview {
   // 3-tier rollup (minimal/partial/complete) computed server-side — the canonical
   // breakdown under the tier3 default scale (the 5-level damageCounts miss tier3 rows).
   damageTierCounts?: Record<string, number>;
-  taskCounts: Record<string, number>;
-  lifeSafetyOpen: number;
   areas: { area: string; count: number; worst: string }[];
   // `hour` is really a bucket index in `timeSeriesUnit` steps ago (0 = now);
   // the unit flips from "hour" to "day" once the crisis is older than 48h.
@@ -95,13 +93,9 @@ export interface ReportFilters {
   crisisId?: string;
   damage?: string[];
   verification?: string[];
-  taskStatus?: string[];
-  severity?: string[];
-  lifeSafety?: boolean;
   cluster?: string;
   adm2Pcode?: string;
   adm3Pcode?: string;
-  assignee?: string;
   q?: string;
   pageSize?: number;
   cursor?: string;
@@ -112,13 +106,9 @@ function qs(f: ReportFilters): string {
   if (f.crisisId) p.set("crisisId", f.crisisId);
   f.damage?.forEach((d) => p.append("damage", d));
   f.verification?.forEach((v) => p.append("verification", v));
-  f.taskStatus?.forEach((t) => p.append("taskStatus", t));
-  f.severity?.forEach((s) => p.append("severity", s));
-  if (f.lifeSafety) p.set("lifeSafety", "true");
   if (f.cluster) p.set("cluster", f.cluster);
   if (f.adm2Pcode) p.set("adm2Pcode", f.adm2Pcode);
   if (f.adm3Pcode) p.set("adm3Pcode", f.adm3Pcode);
-  if (f.assignee) p.set("assignee", f.assignee);
   if (f.q) p.set("q", f.q);
   if (f.cursor) p.set("cursor", f.cursor);
   p.set("pageSize", String(f.pageSize ?? 200));
@@ -301,27 +291,6 @@ export const api = {
       const body = (await res.json().catch(() => null)) as { error?: string; message?: string } | null;
       throw new ApiError(body?.error ?? "error", body?.message ?? `form → ${res.status}`, res.status);
     }
-    return res.json();
-  },
-
-  async patchTask(
-    id: string,
-    body: {
-      taskStatus?: TaskStatus;
-      assignee?: string;
-      severity?: Severity;
-      disposition?: Disposition;
-      clusters?: string[];
-      note?: string;
-    },
-  ): Promise<Report> {
-    const res = await fetch(`${API}/reports/${id}/task`, {
-      method: "PATCH",
-      headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify(body),
-    });
-    if (res.status === 401) { on401(); throw new Error("unauthorized"); }
-    if (!res.ok) throw new Error(`task → ${res.status}`);
     return res.json();
   },
 };

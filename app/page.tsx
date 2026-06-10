@@ -11,7 +11,7 @@ import { TimeSeriesChart } from "@/components/TimeSeriesChart";
 import { DamageBreakdown } from "@/components/DamageBreakdown";
 import { api, type StatsOverview } from "@/lib/api";
 import { relativeTime, crisisTitle, crisisArea } from "@/lib/format";
-import { DAMAGE_COLORS, TASK_STATUS_LABELS, TASK_STATUS_ORDER, damageColor } from "@/lib/types";
+import { DAMAGE_COLORS, damageColor } from "@/lib/types";
 import type { Crisis, DamageLevel } from "@/lib/types";
 
 export default function OverviewPage() {
@@ -82,11 +82,11 @@ export default function OverviewPage() {
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard label="Reports" value={s.totalReports} sub="from the field" icon={<Building2 size={16} />} />
           <StatCard
-            label="Life-safety open"
-            value={s.lifeSafetyOpen}
-            sub="open people-at-risk reports"
+            label="Pending review"
+            value={s.verificationCounts.pending ?? 0}
+            sub="reports awaiting verification"
             icon={<Siren size={16} />}
-            accent={DAMAGE_COLORS.destroyed}
+            accent="var(--color-warn)"
           />
           <StatCard
             label="Heavy damage"
@@ -114,11 +114,15 @@ export default function OverviewPage() {
           >
             Verification & triage
           </SectionTitle>
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-            {TASK_STATUS_ORDER.map((st) => (
-              <div key={st} className="rounded-xl border border-line bg-surface2/40 px-3 py-2.5">
-                <div className="text-[22px] font-bold tabular-nums text-ink">{s.taskCounts[st] ?? 0}</div>
-                <div className="text-[11px] font-medium text-ink3">{TASK_STATUS_LABELS[st]}</div>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              ["Verified", s.verificationCounts.verified ?? 0],
+              ["Pending review", s.verificationCounts.pending ?? 0],
+              ["Flagged", s.verificationCounts.flagged ?? 0],
+            ] as const).map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-line bg-surface2/40 px-3 py-2.5">
+                <div className="text-[22px] font-bold tabular-nums text-ink">{value}</div>
+                <div className="text-[11px] font-medium text-ink3">{label}</div>
               </div>
             ))}
           </div>

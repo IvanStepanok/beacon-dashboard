@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   X, Building2, Sparkles, Languages, CheckCircle2, Flag, Clock,
-  MapPin, ShieldCheck, History, ListChecks, Siren, ExternalLink, Copy, Landmark, AlertTriangle,
+  MapPin, ShieldCheck, History, ListChecks, ExternalLink, Copy, Landmark, AlertTriangle,
 } from "lucide-react";
 import { Card, SectionTitle, DamageBadge, VerificationBadge } from "@/components/ui";
 import { AuthImage } from "@/components/AuthImage";
@@ -14,7 +14,7 @@ import { api, ApiError, API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { relativeTime, locationLabel, areaLabel, coordsLabel } from "@/lib/format";
 import {
-  DAMAGE_TIER_LABELS, SEVERITY_LABELS, TASK_STATUS_LABELS, CLUSTER_LABELS,
+  DAMAGE_TIER_LABELS, CLUSTER_LABELS,
   ELECTRICITY_LABELS, HEALTH_SERVICES_LABELS, PRESSING_NEED_LABELS, hasModular,
   damageLabel, damageColor,
   type DamageLevel, type Report, type Verification,
@@ -115,7 +115,7 @@ export function ReportPanel({
           </h2>
           {report && (
             <p className="mt-0.5 truncate text-[12px] text-ink3">
-              <span className="font-mono">{report.taskRef}</span> · {relativeTime(report.ageMin)}
+              <span className="font-mono">{report.id}</span> · {relativeTime(report.ageMin)}
               {areaLabel(report) !== "—" && <> · {areaLabel(report)}</>}
             </p>
           )}
@@ -146,9 +146,6 @@ export function ReportPanel({
           <div className="space-y-4">
             {/* status badges */}
             <div className="flex flex-wrap items-center gap-2">
-              {report.lifeSafety && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-complete px-2.5 py-1 text-[12px] font-bold text-white"><Siren size={12} /> Life-safety</span>
-              )}
               <DamageBadge level={report.damage} />
               {report.possiblyDamaged && (
                 <span className="rounded-full bg-surface2 px-2.5 py-1 text-[12px] font-medium text-ink2">possibly damaged</span>
@@ -279,13 +276,10 @@ export function ReportPanel({
               </Card>
             )}
 
-            {/* triage */}
+            {/* affected sectors */}
             <Card>
-              <SectionTitle>Triage</SectionTitle>
+              <SectionTitle>Affected sectors</SectionTitle>
               <dl className="space-y-2 text-[13px]">
-                <Meta label="Task status">{TASK_STATUS_LABELS[report.taskStatus]}</Meta>
-                <Meta label="Severity">{SEVERITY_LABELS[report.severity]}</Meta>
-                <Meta label="Assignee">{report.assignee ?? "—"}</Meta>
                 <Meta label="Clusters">{report.clusters.map((c) => CLUSTER_LABELS[c] ?? c).join(", ") || "—"}</Meta>
               </dl>
               <Link href="/dispatch" className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-[13px] font-semibold text-white hover:bg-primary-ink">

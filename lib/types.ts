@@ -6,11 +6,6 @@ export type DamageLevel = "none" | "slight" | "moderate" | "severe" | "destroyed
 export type DamageTier = "minimal" | "partial" | "complete";
 export type Verification = "pending" | "verified" | "flagged";
 export type DebrisState = "yes" | "no" | "unsure";
-export type TaskStatus = "new" | "triaged" | "assigned" | "in_progress" | "resolved" | "closed";
-export type Severity = "routine" | "elevated" | "life_safety";
-export type Disposition =
-  | "resolved" | "cleared_nothing_found" | "no_action_needed"
-  | "gone_on_arrival" | "unfounded" | "duplicate" | "referred";
 
 export interface AdminRef {
   pcode: string;
@@ -88,13 +83,7 @@ export interface Report {
   capturedAt: string;
   synced: boolean;
   verification: Verification;
-  // tasking axis
-  taskStatus: TaskStatus;
-  disposition?: Disposition;
-  assignee?: string;
-  taskRef?: string;
-  severity: Severity;
-  lifeSafety: boolean;
+  // affected-sector tags (OCHA humanitarian clusters) — optional data dimension
   clusters: string[];
 }
 
@@ -183,31 +172,6 @@ export const VERIFICATION_LABELS: Record<Verification, string> = {
   flagged: "Flagged",
 };
 
-export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  new: "New",
-  triaged: "Triaged",
-  assigned: "Assigned",
-  in_progress: "In progress",
-  resolved: "Resolved",
-  closed: "Closed",
-};
-export const TASK_STATUS_ORDER: TaskStatus[] = ["new", "triaged", "assigned", "in_progress", "resolved", "closed"];
-
-export const SEVERITY_LABELS: Record<Severity, string> = {
-  routine: "Routine",
-  elevated: "Elevated",
-  life_safety: "Life-safety",
-};
-
-export const DISPOSITION_LABELS: Record<Disposition, string> = {
-  resolved: "Resolved",
-  cleared_nothing_found: "Cleared — nothing found",
-  no_action_needed: "No action needed",
-  gone_on_arrival: "Gone on arrival",
-  unfounded: "Unfounded / false",
-  duplicate: "Duplicate",
-  referred: "Referred",
-};
 
 export const CLUSTER_LABELS: Record<string, string> = {
   slsc: "Shelter (SLSC)",

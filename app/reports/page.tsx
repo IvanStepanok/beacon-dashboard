@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Siren } from "lucide-react";
+import { Search } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { ExportButtons } from "@/components/ExportButtons";
 import { ReportPanel } from "@/components/ReportPanel";
@@ -10,7 +10,6 @@ import { api, type ReportFilters } from "@/lib/api";
 import { relativeTime, locationLabel, areaLabel } from "@/lib/format";
 import {
   DAMAGE_COLORS, DAMAGE_LABELS, DAMAGE_ORDER,
-  TASK_STATUS_LABELS,
   type Crisis, type DamageLevel, type Report, type Verification,
 } from "@/lib/types";
 
@@ -21,7 +20,6 @@ export default function ReportsPage() {
   const [query, setQuery] = useState("");
   const [damage, setDamage] = useState<Set<DamageLevel>>(new Set());
   const [verif, setVerif] = useState<Set<Verification>>(new Set());
-  const [lifeSafety, setLifeSafety] = useState(false);
   const [items, setItems] = useState<Report[]>([]);
   const [total, setTotal] = useState(0);
   const [grandTotal, setGrandTotal] = useState(0);
@@ -44,10 +42,9 @@ export default function ReportsPage() {
       q: query.trim() || undefined,
       damage: damage.size ? [...damage] : undefined,
       verification: verif.size ? [...verif] : undefined,
-      lifeSafety: lifeSafety || undefined,
       pageSize: 200,
     }),
-    [selectedCrisis, query, damage, verif, lifeSafety],
+    [selectedCrisis, query, damage, verif],
   );
 
   useEffect(() => {
@@ -151,14 +148,6 @@ export default function ReportsPage() {
                 </button>
               );
             })}
-            <button
-              onClick={() => setLifeSafety((v) => !v)}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors ${
-                lifeSafety ? "border-complete bg-complete-soft text-complete" : "border-line text-ink2 hover:bg-surface2"
-              }`}
-            >
-              <Siren size={13} /> Life-safety
-            </button>
           </div>
           <span className="ml-auto text-[13px] font-medium text-ink2">{total} of {grandTotal}</span>
         </div>
@@ -167,12 +156,10 @@ export default function ReportsPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-line text-[12px] uppercase tracking-wide text-ink3">
-                <th className="px-4 py-3 font-semibold">Task</th>
                 <th className="px-4 py-3 font-semibold">Damage</th>
                 <th className="px-4 py-3 font-semibold">Location</th>
                 <th className="px-4 py-3 font-semibold">Area</th>
                 <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Verify</th>
                 <th className="px-4 py-3 text-right font-semibold">Age</th>
               </tr>
             </thead>
@@ -185,22 +172,15 @@ export default function ReportsPage() {
                     selectedId === r.id ? "bg-primary-soft/50" : "hover:bg-surface2/60"
                   }`}
                 >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      {r.lifeSafety && <Siren size={13} className="text-complete" />}
-                      <span className="font-mono text-[12px] text-ink3">{r.taskRef}</span>
-                    </div>
-                  </td>
                   <td className="px-4 py-3"><DamageBadge level={r.damage} /></td>
                   <td className="px-4 py-3 font-medium text-ink">{locationLabel(r)}</td>
                   <td className="px-4 py-3 text-[13px] text-ink2">{areaLabel(r)}</td>
-                  <td className="px-4 py-3 text-[13px] text-ink2">{TASK_STATUS_LABELS[r.taskStatus]}</td>
                   <td className="px-4 py-3"><VerificationBadge status={r.verification} /></td>
                   <td className="px-4 py-3 text-right text-[12px] text-ink3">{relativeTime(r.ageMin)}</td>
                 </tr>
               ))}
               {items.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-10 text-center text-[14px] text-ink3">No reports match these filters.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-10 text-center text-[14px] text-ink3">No reports match these filters.</td></tr>
               )}
             </tbody>
           </table>

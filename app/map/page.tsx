@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { X, MapPin, ArrowRight, Sparkles, Siren } from "lucide-react";
+import { X, MapPin, ArrowRight, Sparkles } from "lucide-react";
 import { SubmissionsMap } from "@/components/SubmissionsMap";
 import { DamageBadge, VerificationBadge } from "@/components/ui";
 import { UpdatedAgo, TruncationBanner } from "@/components/Freshness";
@@ -21,7 +21,6 @@ export default function MapPage() {
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [damage, setDamage] = useState<Set<DamageLevel>>(new Set());
   const [verif, setVerif] = useState<Set<Verification>>(new Set());
-  const [lifeSafety, setLifeSafety] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Crisis scope: the map is always scoped to ONE crisis (default = active).
   // Unlike /reports there is no "All crises" option — a multi-crisis point soup
@@ -78,10 +77,9 @@ export default function MapPage() {
       all.filter(
         (r) =>
           (damage.size === 0 || damage.has(r.damage)) &&
-          (verif.size === 0 || verif.has(r.verification)) &&
-          (!lifeSafety || r.lifeSafety),
+          (verif.size === 0 || verif.has(r.verification)),
       ),
-    [all, damage, verif, lifeSafety],
+    [all, damage, verif],
   );
   const selected = filtered.find((r) => r.id === selectedId) ?? null;
 
@@ -151,14 +149,6 @@ export default function MapPage() {
               </button>
             );
           })}
-          <button
-            onClick={() => setLifeSafety((v) => !v)}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors ${
-              lifeSafety ? "border-complete bg-complete-soft text-complete" : "border-line text-ink2 hover:bg-surface2"
-            }`}
-          >
-            <Siren size={13} /> Life-safety
-          </button>
         </div>
         <span className="ml-auto flex items-center gap-3 text-[13px] font-medium text-ink2">
           {filtered.length} of {all.length} shown
@@ -206,13 +196,8 @@ export default function MapPage() {
               {locationLabel(selected)}
             </h3>
             <div className="mt-0.5 text-[12px] text-ink3">
-              {selected.taskRef} · {relativeTime(selected.ageMin)}
+              {relativeTime(selected.ageMin)}
             </div>
-            {selected.lifeSafety && (
-              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-complete px-2.5 py-1 text-[12px] font-bold text-white">
-                <Siren size={12} /> Life-safety
-              </div>
-            )}
             <dl className="mt-4 space-y-2.5 text-[13px]">
               <Row label="Status"><VerificationBadge status={selected.verification} /></Row>
               <Row label="Area">

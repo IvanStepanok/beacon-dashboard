@@ -83,10 +83,6 @@ export function PrintBrief({
               <td className={`${cell} tabular-nums`}>{stats.verificationCounts[v] ?? 0}</td>
             </tr>
           ))}
-          <tr>
-            <td className={cell}>Open life-safety reports</td>
-            <td className={`${cell} tabular-nums`}>{stats.lifeSafetyOpen}</td>
-          </tr>
         </tbody>
       </table>
 
