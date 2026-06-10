@@ -210,7 +210,7 @@ export const api = {
     get<{ buildingId: string; current: string | null; versions: unknown[] }>(
       `/buildings/${encodeURIComponent(buildingId)}/timeline`,
     ),
-  exportUrl: (format: "geojson" | "csv" | "gpkg", f: ReportFilters = {}) =>
+  exportUrl: (format: "geojson" | "csv" | "gpkg" | "kml" | "shapefile", f: ReportFilters = {}) =>
     `${API}/reports/export?format=${format}&${qs(f)}`,
 
   /**
@@ -220,7 +220,7 @@ export const api = {
    * trigger the download. The filename prefers the server's Content-Disposition.
    */
   async exportBlob(
-    format: "geojson" | "csv" | "gpkg",
+    format: "geojson" | "csv" | "gpkg" | "kml" | "shapefile",
     f: ReportFilters = {},
   ): Promise<{ blob: Blob; filename: string }> {
     const res = await fetch(`${API}/reports/export?format=${format}&${qs(f)}`, {
@@ -233,7 +233,12 @@ export const api = {
     }
     if (!res.ok) throw new Error(`export → ${res.status}`);
     const blob = await res.blob();
-    const ext = format === "csv" ? "csv" : format === "gpkg" ? "gpkg" : "geojson";
+    const ext =
+      format === "csv" ? "csv"
+      : format === "gpkg" ? "gpkg"
+      : format === "kml" ? "kml"
+      : format === "shapefile" ? "shp.zip"
+      : "geojson";
     const cd = res.headers.get("Content-Disposition");
     const match = cd?.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
     const filename = match ? decodeURIComponent(match[1]) : `beacon-export-${format}.${ext}`;

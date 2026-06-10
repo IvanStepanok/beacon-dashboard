@@ -19,13 +19,15 @@ export function ExportButtons({
   const [error, setError] = useState<string | null>(null);
 
   const pad = compact ? "px-3 py-1.5 text-[12px]" : "px-3.5 py-2 text-[13px]";
-  const formats: { fmt: "geojson" | "csv" | "gpkg"; label: string; primary?: boolean }[] = [
+  const formats: { fmt: "geojson" | "csv" | "gpkg" | "kml" | "shapefile"; label: string; primary?: boolean }[] = [
     { fmt: "geojson", label: "GeoJSON", primary: true },
     { fmt: "csv", label: "CSV·HXL" },
     { fmt: "gpkg", label: "GeoPackage" },
+    { fmt: "kml", label: "KML" },
+    { fmt: "shapefile", label: "Shapefile" },
   ];
 
-  async function download(fmt: "geojson" | "csv" | "gpkg") {
+  async function download(fmt: "geojson" | "csv" | "gpkg" | "kml" | "shapefile") {
     if (busy) return;
     setBusy(fmt);
     setError(null);
