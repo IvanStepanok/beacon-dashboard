@@ -10,19 +10,23 @@ import {
   ClipboardList,
   Siren,
   ShieldCheck,
-  Radio,
+  ListChecks,
   AlertTriangle,
   Settings as SettingsIcon,
+  Globe,
+  ExternalLink,
 } from "lucide-react";
 import { LogOut } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAuth, ROLE_LABELS } from "@/lib/auth";
+import { crisisTitle } from "@/lib/format";
 import type { Crisis } from "@/lib/types";
 
 const NAV = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/crises", label: "Crises", icon: AlertTriangle },
-  { href: "/dispatch", label: "Dispatch", icon: Radio },
+  // Route path stays /dispatch (links in the wild) — only the label changed.
+  { href: "/dispatch", label: "Verification & triage", icon: ListChecks },
   { href: "/map", label: "Live map", icon: MapIcon },
   { href: "/reports", label: "Reports", icon: ClipboardList },
   { href: "/settings", label: "Settings", icon: SettingsIcon },
@@ -38,7 +42,7 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-line bg-surface">
+    <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-line bg-surface print:hidden">
       <div className="flex items-center gap-3 px-5 pt-6 pb-5">
         <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-white shadow-sm shadow-primary/30">
           <Radar size={22} strokeWidth={2.2} />
@@ -64,7 +68,7 @@ export function Sidebar() {
           </span>
         </div>
         <div className="mt-1.5 text-[13px] font-semibold text-ink">
-          {crisis?.title ?? "—"}
+          {crisis ? crisisTitle(crisis) : "—"}
         </div>
         <div className="text-[12px] text-ink2">
           {crisis ? `${crisis.area} · ${crisis.startedAgoHrs}h ago` : "loading…"}
@@ -101,6 +105,18 @@ export function Sidebar() {
             </Link>
           );
         })}
+        {/* Citizen-facing aggregated view (no login). Opens in a new tab so the
+            analyst keeps their console context; outside NAV — never "active". */}
+        <Link
+          href="/public"
+          target="_blank"
+          rel="noopener"
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium text-ink2 hover:bg-surface2 hover:text-ink"
+        >
+          <Globe size={18} strokeWidth={2} />
+          Public view
+          <ExternalLink size={13} className="ml-auto text-ink3" />
+        </Link>
       </nav>
 
       <div className="mt-auto border-t border-line px-4 py-4">

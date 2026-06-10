@@ -59,6 +59,9 @@ export function SubmissionsMap({
   // One-shot: fit the view to the FIRST non-empty data load, then never again —
   // later filter/selection updates must not yank the analyst's viewport around.
   const fitDoneRef = useRef(false);
+  // Previous selection — the camera eases ONLY when the selected id itself
+  // changes, never when a poll swaps the `reports` array identity.
+  const prevSelectedRef = useRef<string | null>(null);
   const onSelectRef = useRef(onSelect);
   const reportsRef = useRef(reports);
   // Keep the latest values without re-running the map-init effect; intentional.
@@ -207,6 +210,7 @@ export function SubmissionsMap({
       disposed = true;
       readyRef.current = false;
       fitDoneRef.current = false;
+      prevSelectedRef.current = null;
       mapRef.current = null;
       map?.remove();
     };
@@ -224,17 +228,20 @@ export function SubmissionsMap({
     fitOnce(map, fc);
   }, [reports]);
 
-  // Update selected halo + fly to selection.
+  // Update selected halo + fly to selection. The ease-to is guarded on the
+  // PREVIOUS selected id: the 30s poll re-creates `reports` (new array identity)
+  // and must not snap the camera back to a pin the analyst already panned away from.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     map.setFilter("selected-halo", ["==", ["get", "id"], selectedId ?? ""]);
-    if (selectedId) {
+    if (selectedId && selectedId !== prevSelectedRef.current) {
       const r = reports.find((x) => x.id === selectedId);
       if (r && typeof r.lat === "number" && typeof r.lng === "number") {
         map.easeTo({ center: [r.lng, r.lat], zoom: Math.max(map.getZoom(), 15) });
       }
     }
+    prevSelectedRef.current = selectedId;
   }, [selectedId, reports]);
 
   return <div ref={container} className="h-full w-full" />;

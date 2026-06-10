@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   X, Building2, Sparkles, Languages, CheckCircle2, Flag, Clock,
-  MapPin, ShieldCheck, History, Radio, Siren, ExternalLink, Copy,
+  MapPin, ShieldCheck, History, ListChecks, Siren, ExternalLink, Copy, Landmark, AlertTriangle,
 } from "lucide-react";
 import { Card, SectionTitle, DamageBadge, VerificationBadge } from "@/components/ui";
 import { AuthImage } from "@/components/AuthImage";
 import { ExportButtons } from "@/components/ExportButtons";
-import { api, API_BASE } from "@/lib/api";
+import { VerifyConfirm } from "@/components/VerifyConfirm";
+import { api, ApiError, API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { relativeTime, locationLabel, areaLabel, coordsLabel } from "@/lib/format";
 import {
@@ -43,6 +44,9 @@ export function ReportPanel({
   const [showOriginal, setShowOriginal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [verifyNote, setVerifyNote] = useState("");
+  const [needsForce, setNeedsForce] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const { canMutate } = useAuth();
 
   // Panel remounts per id (key at the call site), so every useState is already
@@ -70,13 +74,22 @@ export function ReportPanel({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const verify = async (v: Verification) => {
+  // Setting "verified" on a photo-less report answers 409 photo_required —
+  // surface the confirm box (force=true + mandatory note) instead of failing.
+  const verify = async (v: Verification, force = false) => {
     if (!canMutate || busy) return;
     setBusy(true);
+    setActionError(null);
     try {
-      const updated = await api.patchVerification(id, v);
+      const updated = await api.patchVerification(id, v, { note: verifyNote, force });
       setReport(updated);
       onChanged?.(updated);
+      setVerifyNote("");
+      setNeedsForce(false);
+    } catch (e) {
+      if (v === "verified" && e instanceof ApiError && e.code === "photo_required") setNeedsForce(true);
+      // 403 / 5xx / network — say so instead of swallowing the failure.
+      else setActionError(e instanceof Error ? e.message : "network error");
     } finally {
       setBusy(false);
     }
@@ -140,6 +153,14 @@ export function ReportPanel({
               {report.possiblyDamaged && (
                 <span className="rounded-full bg-surface2 px-2.5 py-1 text-[12px] font-medium text-ink2">possibly damaged</span>
               )}
+              {report.buildingSource === "footprint" && (
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-[12px] font-semibold text-primary-ink"
+                  title="Pinned to a real building footprint on the map"
+                >
+                  <Landmark size={12} /> Footprint-matched
+                </span>
+              )}
               <VerificationBadge status={report.verification} />
             </div>
 
@@ -149,7 +170,30 @@ export function ReportPanel({
               <PanelAction active={report.verification === "pending"} color="var(--color-warn)" bg="var(--color-warn-soft)" icon={<Clock size={15} />} disabled={busy || !canMutate} onClick={() => verify("pending")}>Pending</PanelAction>
               <PanelAction active={report.verification === "flagged"} color="var(--color-complete)" bg="var(--color-complete-soft)" icon={<Flag size={15} />} disabled={busy || !canMutate} onClick={() => verify("flagged")}>Flag</PanelAction>
             </div>
+            {needsForce ? (
+              <VerifyConfirm
+                note={verifyNote}
+                onNote={setVerifyNote}
+                onConfirm={() => verify("verified", true)}
+                onCancel={() => setNeedsForce(false)}
+                busy={busy}
+              />
+            ) : (
+              <input
+                value={verifyNote}
+                onChange={(e) => setVerifyNote(e.target.value)}
+                placeholder="Verification note (optional)"
+                disabled={!canMutate}
+                className="w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[13px] outline-none placeholder:text-ink3 focus:border-primary disabled:opacity-50"
+              />
+            )}
             {!canMutate && <p className="-mt-1 text-[12px] text-ink3">Read-only role — verification is disabled.</p>}
+            {actionError && (
+              <div className="flex items-start gap-2 rounded-lg border border-warn/40 bg-warn-soft/60 px-3 py-2 text-[12px] text-ink2">
+                <AlertTriangle size={13} className="mt-0.5 shrink-0 text-warn" />
+                <span>Action failed — {actionError}</span>
+              </div>
+            )}
 
             {/* photo */}
             {report.photoUrl ? (
@@ -170,6 +214,7 @@ export function ReportPanel({
                 <Field label="Damage (3-tier)">{DAMAGE_TIER_LABELS[report.damageTier]}</Field>
                 <Field label="Grade detail">{damageLabel(report.damage)}</Field>
                 <Field label="Infrastructure"><span className="capitalize">{report.infraTypes.join(", ") || "—"}</span></Field>
+                {report.infraName && <Field label="Infrastructure name">{report.infraName}</Field>}
                 <Field label="Crisis type"><span className="capitalize">{report.crisisNature.join(", ") || "—"}</span></Field>
                 <Field label="Debris on road"><span className="capitalize">{report.debris}</span></Field>
               </dl>
@@ -228,12 +273,15 @@ export function ReportPanel({
                     </div>
                   </div>
                 )}
+                {report.modular?.pressingNeedsOther && (
+                  <p className="mt-2 text-[13px] text-ink2">Other: “{report.modular.pressingNeedsOther}”</p>
+                )}
               </Card>
             )}
 
-            {/* dispatch */}
+            {/* triage */}
             <Card>
-              <SectionTitle>Dispatch</SectionTitle>
+              <SectionTitle>Triage</SectionTitle>
               <dl className="space-y-2 text-[13px]">
                 <Meta label="Task status">{TASK_STATUS_LABELS[report.taskStatus]}</Meta>
                 <Meta label="Severity">{SEVERITY_LABELS[report.severity]}</Meta>
@@ -241,7 +289,7 @@ export function ReportPanel({
                 <Meta label="Clusters">{report.clusters.map((c) => CLUSTER_LABELS[c] ?? c).join(", ") || "—"}</Meta>
               </dl>
               <Link href="/dispatch" className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-[13px] font-semibold text-white hover:bg-primary-ink">
-                <Radio size={14} /> Manage in Dispatch
+                <ListChecks size={14} /> Open verification & triage
               </Link>
             </Card>
 

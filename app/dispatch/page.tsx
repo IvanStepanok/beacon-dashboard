@@ -1,13 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Siren, X, MapPin, ArrowRight, Sparkles, ShieldCheck } from "lucide-react";
+import { Siren, X, MapPin, ArrowRight, Sparkles, ShieldCheck, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { DamageBadge, VerificationBadge } from "@/components/ui";
-import { api } from "@/lib/api";
+import { UpdatedAgo, TruncationBanner } from "@/components/Freshness";
+import { VerifyConfirm } from "@/components/VerifyConfirm";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { relativeTime } from "@/lib/format";
+import { relativeTime, crisisTitle } from "@/lib/format";
 import {
   CLUSTER_LABELS,
   damageColor,
@@ -20,6 +22,7 @@ import {
   type Report,
   type Severity,
   type TaskStatus,
+  type Verification,
 } from "@/lib/types";
 
 const SEVERITY_COLOR: Record<Severity, string> = {
@@ -32,12 +35,20 @@ const ALL_CLUSTERS = ["slsc", "health", "wash", "education", "logistics", "cccm"
 
 export default function DispatchPage() {
   const [reports, setReports] = useState<Report[]>([]);
+  const [total, setTotal] = useState(0);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [crisis, setCrisis] = useState<Crisis | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(() => {
-    setLoading(true);
+  // Monotonic request id: a board snapshot only lands if no newer load (or
+  // local mutation) started while it was in flight — an in-flight 60s poll
+  // must not revert an analyst's just-made verification until the next tick.
+  const reqIdRef = useRef(0);
+
+  const load = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
+    const reqId = ++reqIdRef.current;
     // Board is scoped to the active crisis; unscoped only when none resolves.
     api
       .activeCrisis()
@@ -49,15 +60,30 @@ export default function DispatchPage() {
         setCrisis(null);
         return api.listAllReports({ pageSize: 200 });
       })
-      .then((r) => setReports(r.items))
+      .then((r) => {
+        if (reqId !== reqIdRef.current) return; // stale snapshot — discard
+        setReports(r.items);
+        setTotal(r.total);
+        setUpdatedAt(Date.now());
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
-  // Mount-time data load; the setState calls inside `load` are intentional.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(load, [load]);
+  // Mount-time data load + 60s silent refresh (M3 near-real-time); the setState
+  // calls inside `load` are intentional.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+    const t = setInterval(() => load(true), 60_000);
+    return () => clearInterval(t);
+  }, [load]);
 
-  const replace = (r: Report) => setReports((prev) => prev.map((x) => (x.id === r.id ? r : x)));
+  const replace = (r: Report) => {
+    // A local mutation outdates any in-flight poll snapshot — bump the id so
+    // a stale response can't overwrite this change.
+    reqIdRef.current++;
+    setReports((prev) => prev.map((x) => (x.id === r.id ? r : x)));
+  };
 
   const groups = useMemo(() => {
     const g: Record<string, Report[]> = {};
@@ -75,29 +101,31 @@ export default function DispatchPage() {
   return (
     <div className="flex h-screen flex-col">
       <PageHeader
-        title="Dispatch — command console"
+        title="Verification & triage"
         subtitle={
           crisis
-            ? `${crisis.title} · Triage → verify → assign → resolve. Life-safety runs a separate fast lane.`
-            : "Triage → verify → assign → resolve. Life-safety runs a separate fast lane."
+            ? `${crisisTitle(crisis)} · Triage → verify → assign → resolve. Life-safety flags are surfaced first.`
+            : "Triage → verify → assign → resolve. Life-safety flags are surfaced first."
         }
+        action={<UpdatedAgo at={updatedAt} />}
       />
 
       <div className="relative flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto px-8 py-6">
-          {/* Life-safety fast lane */}
+          <TruncationBanner shown={reports.length} total={total} className="mb-4" />
+          {/* Life-safety flags */}
           <div className="mb-6 rounded-2xl border border-complete/30 bg-complete-soft/50 p-4">
             <div className="mb-3 flex items-center gap-2">
               <Siren size={16} className="text-complete" />
               <span className="text-[13px] font-bold uppercase tracking-wide text-complete">
-                Life-safety fast lane
+                Life-safety flags
               </span>
               <span className="rounded-full bg-complete px-2 py-0.5 text-[12px] font-bold text-white">
                 {lifeSafety.length} open
               </span>
             </div>
             {lifeSafety.length === 0 ? (
-              <p className="text-[13px] text-ink2">No open life-safety reports. 🙏</p>
+              <p className="text-[13px] text-ink2">No open life-safety reports.</p>
             ) : (
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {lifeSafety.map((r) => (
@@ -167,7 +195,10 @@ export default function DispatchPage() {
         </div>
 
         {selected && (
+          // Keyed by report: panel state (verify note, force confirm, assignee)
+          // must never leak across report switches (mirrors /reports's panel).
           <DispatchPanel
+            key={selected.id}
             report={selected}
             onClose={() => setSelectedId(null)}
             onChange={replace}
@@ -191,12 +222,37 @@ function DispatchPanel({
   const [busy, setBusy] = useState(false);
   const [disposition, setDisposition] = useState<Disposition>("resolved");
   const [assignee, setAssignee] = useState(report.assignee ?? "");
+  const [verifyNote, setVerifyNote] = useState("");
+  const [needsForce, setNeedsForce] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const run = async (fn: () => Promise<Report>) => {
     if (!canMutate) return;
     setBusy(true);
+    setActionError(null);
     try {
       onChange(await fn());
+    } catch (e) {
+      // 403 / 5xx / network — say so instead of an unhandled rejection.
+      setActionError(e instanceof Error ? e.message : "network error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Verification is its own path: a photo-less report answers 409 photo_required
+  // on "verified" — surface the confirm box instead of failing silently.
+  const verify = async (v: Verification, force = false) => {
+    if (!canMutate || busy) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      onChange(await api.patchVerification(report.id, v, { note: verifyNote, force }));
+      setVerifyNote("");
+      setNeedsForce(false);
+    } catch (e) {
+      if (v === "verified" && e instanceof ApiError && e.code === "photo_required") setNeedsForce(true);
+      else setActionError(e instanceof Error ? e.message : "network error");
     } finally {
       setBusy(false);
     }
@@ -237,7 +293,14 @@ function DispatchPanel({
 
       {!canMutate && (
         <div className="mt-3 rounded-lg border border-line bg-surface2/60 px-3 py-2 text-[12px] text-ink2">
-          Read-only role — dispatch actions are disabled.
+          Read-only role — triage actions are disabled.
+        </div>
+      )}
+
+      {actionError && (
+        <div className="mt-3 flex items-start gap-2 rounded-lg border border-warn/40 bg-warn-soft/60 px-3 py-2 text-[12px] text-ink2">
+          <AlertTriangle size={13} className="mt-0.5 shrink-0 text-warn" />
+          <span>Action failed — {actionError}</span>
         </div>
       )}
 
@@ -263,7 +326,7 @@ function DispatchPanel({
             <button
               key={v}
               disabled={busy || !canMutate}
-              onClick={() => run(() => api.patchVerification(report.id, v))}
+              onClick={() => verify(v)}
               className={`flex-1 rounded-lg border px-2 py-1.5 text-[12px] font-semibold capitalize ${
                 report.verification === v ? "border-primary bg-primary-soft text-primary-ink" : "border-line text-ink2 hover:bg-surface2"
               }`}
@@ -271,6 +334,24 @@ function DispatchPanel({
               {v}
             </button>
           ))}
+        </div>
+        <div className="mt-2">
+          {needsForce ? (
+            <VerifyConfirm
+              note={verifyNote}
+              onNote={setVerifyNote}
+              onConfirm={() => verify("verified", true)}
+              onCancel={() => setNeedsForce(false)}
+              busy={busy}
+            />
+          ) : (
+            <input
+              value={verifyNote}
+              onChange={(e) => setVerifyNote(e.target.value)}
+              placeholder="Verification note (optional)"
+              className="w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[12px] outline-none placeholder:text-ink3 focus:border-primary"
+            />
+          )}
         </div>
       </Section>
 
@@ -280,7 +361,7 @@ function DispatchPanel({
           <input
             value={assignee}
             onChange={(e) => setAssignee(e.target.value)}
-            placeholder="e.g. SAR Unit 1"
+            placeholder="e.g. Field assessment team A"
             className="flex-1 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[13px] outline-none focus:border-primary"
           />
           <button

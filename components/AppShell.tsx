@@ -4,13 +4,13 @@ import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { useAuth } from "@/lib/auth";
 
-// Decides the chrome: /login is standalone; every other route gets the analyst
-// shell behind the auth guard.
+// Decides the chrome: /login and the login-free /public community view are
+// standalone; every other route gets the analyst shell behind the auth guard.
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
 
-  if (pathname === "/login") return <>{children}</>;
+  if (pathname === "/login" || pathname === "/public") return <>{children}</>;
 
   if (loading) {
     return <div className="grid min-h-screen place-items-center text-ink3">Loading…</div>;

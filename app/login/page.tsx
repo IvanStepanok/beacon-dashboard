@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Radar } from "lucide-react";
+import Link from "next/link";
+import { Radar, Globe } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 const DEMO = [
@@ -86,6 +87,16 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* No-login surface: the aggregated community heatmap (Q18). */}
+        <div className="mt-4 text-center">
+          <Link
+            href="/public"
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:text-primary-ink"
+          >
+            <Globe size={14} /> Public community view — no sign-in needed
+          </Link>
         </div>
       </div>
     </div>

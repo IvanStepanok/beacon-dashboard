@@ -36,3 +36,16 @@ body {
 .maplibregl-ctrl-attrib {
   font-size: 10px;
 }
+
+/* Print (Overview's "Print situation brief" → browser Save-as-PDF): the app
+   chrome hides itself via print:hidden — here we just force a clean white
+   page with sane margins for the brief. */
+@media print {
+  html,
+  body {
+    background: #fff;
+  }
+  @page {
+    margin: 14mm;
+  }
+}

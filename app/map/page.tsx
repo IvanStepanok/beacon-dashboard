@@ -5,8 +5,9 @@ import Link from "next/link";
 import { X, MapPin, ArrowRight, Sparkles, Siren } from "lucide-react";
 import { SubmissionsMap } from "@/components/SubmissionsMap";
 import { DamageBadge, VerificationBadge } from "@/components/ui";
+import { UpdatedAgo, TruncationBanner } from "@/components/Freshness";
 import { api } from "@/lib/api";
-import { relativeTime, locationLabel, coordsLabel } from "@/lib/format";
+import { relativeTime, locationLabel, coordsLabel, crisisTitle } from "@/lib/format";
 import {
   DAMAGE_COLORS, DAMAGE_LABELS, DAMAGE_ORDER, CLUSTER_LABELS, damageLabel,
   type Crisis, type DamageLevel, type Report, type Verification,
@@ -16,6 +17,8 @@ const VERIF_FILTERS: Verification[] = ["verified", "pending", "flagged"];
 
 export default function MapPage() {
   const [all, setAll] = useState<Report[]>([]);
+  const [total, setTotal] = useState(0);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [damage, setDamage] = useState<Set<DamageLevel>>(new Set());
   const [verif, setVerif] = useState<Set<Verification>>(new Set());
   const [lifeSafety, setLifeSafety] = useState(false);
@@ -47,14 +50,27 @@ export default function MapPage() {
   }, []);
 
   // Load reports only after the crisis scope is resolved (avoids a flash of
-  // the unscoped world before the active crisis arrives).
+  // the unscoped world before the active crisis arrives). A 30s silent re-fetch
+  // keeps the map near-real-time (M3); viewport and filters are untouched —
+  // the map only remounts when the crisis scope (its key) changes.
   useEffect(() => {
     if (!scopeReady) return;
     let cancelled = false;
-    api
-      .listAllReports({ crisisId: selectedCrisis || undefined, pageSize: 200 }, { signal: () => cancelled })
-      .then((r) => { if (!cancelled) setAll(r.items); });
-    return () => { cancelled = true; };
+    const fetchReports = () =>
+      api
+        .listAllReports({ crisisId: selectedCrisis || undefined, pageSize: 200 }, { signal: () => cancelled })
+        .then((r) => {
+          if (cancelled) return;
+          setAll(r.items);
+          setTotal(r.total);
+          setUpdatedAt(Date.now());
+        })
+        // A failed poll (API blip) keeps the last data on screen; the UpdatedAgo
+        // stamp stops advancing, which IS the staleness signal — no rejection leaks.
+        .catch(() => {});
+    fetchReports();
+    const t = setInterval(fetchReports, 30_000);
+    return () => { cancelled = true; clearInterval(t); };
   }, [scopeReady, selectedCrisis]);
 
   const filtered = useMemo(
@@ -94,7 +110,7 @@ export default function MapPage() {
               .sort((a, b) => (b.reportCount ?? 0) - (a.reportCount ?? 0))
               .map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.title}{c.status !== "active" ? ` (${c.status})` : ""} · {c.reportCount ?? 0}
+                  {crisisTitle(c)}{c.status !== "active" ? ` (${c.status})` : ""} · {c.reportCount ?? 0}
                 </option>
               ))}
           </select>
@@ -144,10 +160,18 @@ export default function MapPage() {
             <Siren size={13} /> Life-safety
           </button>
         </div>
-        <span className="ml-auto text-[13px] font-medium text-ink2">{filtered.length} of {all.length} shown</span>
+        <span className="ml-auto flex items-center gap-3 text-[13px] font-medium text-ink2">
+          {filtered.length} of {all.length} shown
+          <UpdatedAgo at={updatedAt} />
+        </span>
       </div>
 
       <div className="relative flex-1">
+        <TruncationBanner
+          shown={all.length}
+          total={total}
+          className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 shadow-sm"
+        />
         {/* Keyed by crisis: switching scope remounts the map so the new crisis's
             center + one-shot fitBounds apply. Filter/selection changes keep the
             key (and therefore the viewport) stable. */}
@@ -195,7 +219,7 @@ export default function MapPage() {
                 <span className="text-ink2">{selected.admin?.adm3?.name ?? "—"}</span>{" "}
                 <span className="font-mono text-[11px] text-ink3">{selected.adm3Pcode}</span>
               </Row>
-              <Row label="what3words"><span className="font-mono text-[12px] text-ink2">{"///"}{selected.what3words}</span></Row>
+              <Row label="Plus Code"><span className="font-mono text-[12px] text-ink2">{selected.plusCode || selected.what3words || "—"}</span></Row>
               <Row label="Coordinates"><span className="font-mono text-[12px] text-ink2">{coordsLabel(selected)}</span></Row>
               <Row label="Sectors"><span className="text-ink2">{selected.clusters.map((c) => CLUSTER_LABELS[c] ?? c).join(", ") || "—"}</span></Row>
               <Row label="Debris"><span className="capitalize text-ink2">{selected.debris}</span></Row>

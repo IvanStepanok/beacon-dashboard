@@ -87,7 +87,7 @@ export default function ReportsPage() {
       <div className="transition-[padding] duration-200 ease-out" style={{ paddingRight: selectedId ? 480 : 0 }}>
       <PageHeader
         title="Reports"
-        subtitle="Community submissions — review, verify, dispatch and export"
+        subtitle="Community submissions — review, verify, triage and export"
         action={<ExportButtons filters={filters} />}
       />
       <div className="space-y-4 px-8 py-6">

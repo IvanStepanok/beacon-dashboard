@@ -5,7 +5,7 @@ import { Download, Loader2 } from "lucide-react";
 import { api, type ReportFilters } from "@/lib/api";
 
 // Authenticated download of the backend's server-side export
-// (HXL-CSV, GeoPackage, PDNA-ready aggregates). A plain <a href> navigation
+// (GeoJSON, HXL-CSV, GeoPackage). A plain <a href> navigation
 // carries no Authorization header → 401, so we fetch with the analyst JWT,
 // read the response as a Blob, and trigger a client-side download.
 export function ExportButtons({
@@ -19,14 +19,13 @@ export function ExportButtons({
   const [error, setError] = useState<string | null>(null);
 
   const pad = compact ? "px-3 py-1.5 text-[12px]" : "px-3.5 py-2 text-[13px]";
-  const formats: { fmt: "geojson" | "csv" | "gpkg" | "pdna"; label: string; primary?: boolean }[] = [
+  const formats: { fmt: "geojson" | "csv" | "gpkg"; label: string; primary?: boolean }[] = [
     { fmt: "geojson", label: "GeoJSON", primary: true },
     { fmt: "csv", label: "CSV·HXL" },
     { fmt: "gpkg", label: "GeoPackage" },
-    { fmt: "pdna", label: "PDNA-ready aggregates (damage counts)" },
   ];
 
-  async function download(fmt: "geojson" | "csv" | "gpkg" | "pdna") {
+  async function download(fmt: "geojson" | "csv" | "gpkg") {
     if (busy) return;
     setBusy(fmt);
     setError(null);

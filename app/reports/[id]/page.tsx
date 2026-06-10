@@ -4,12 +4,13 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft, Building2, Sparkles, Languages, CheckCircle2, Flag, Clock,
-  MapPin, ShieldCheck, History, Radio, Siren,
+  MapPin, ShieldCheck, History, ListChecks, Siren, Landmark, AlertTriangle,
 } from "lucide-react";
 import { Card, SectionTitle, DamageBadge, VerificationBadge } from "@/components/ui";
 import { AuthImage } from "@/components/AuthImage";
 import { ExportButtons } from "@/components/ExportButtons";
-import { api, API_BASE } from "@/lib/api";
+import { VerifyConfirm } from "@/components/VerifyConfirm";
+import { api, ApiError, API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { relativeTime, locationLabel, areaLabel, coordsLabel } from "@/lib/format";
 import {
@@ -29,6 +30,9 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
   const [timeline, setTimeline] = useState<TimelineVersion[]>([]);
   const [showOriginal, setShowOriginal] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [verifyNote, setVerifyNote] = useState("");
+  const [needsForce, setNeedsForce] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const { canMutate } = useAuth();
 
   useEffect(() => {
@@ -40,10 +44,23 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
     }
   }, [report?.buildingId]);
 
-  const verify = async (v: Verification) => {
-    if (!canMutate) return;
+  // Setting "verified" on a photo-less report answers 409 photo_required —
+  // surface the confirm box (force=true + mandatory note) instead of failing.
+  const verify = async (v: Verification, force = false) => {
+    if (!canMutate || busy) return;
     setBusy(true);
-    try { setReport(await api.patchVerification(id, v)); } finally { setBusy(false); }
+    setActionError(null);
+    try {
+      setReport(await api.patchVerification(id, v, { note: verifyNote, force }));
+      setVerifyNote("");
+      setNeedsForce(false);
+    } catch (e) {
+      if (v === "verified" && e instanceof ApiError && e.code === "photo_required") setNeedsForce(true);
+      // 403 / 5xx / network — say so instead of swallowing the failure.
+      else setActionError(e instanceof Error ? e.message : "network error");
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (report === undefined) return <div className="grid h-screen place-items-center text-ink3">Loading…</div>;
@@ -83,6 +100,14 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
           {report.possiblyDamaged && (
             <span className="rounded-full bg-surface2 px-2.5 py-1 text-[12px] font-medium text-ink2">possibly damaged</span>
           )}
+          {report.buildingSource === "footprint" && (
+            <span
+              className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-[12px] font-semibold text-primary-ink"
+              title="Pinned to a real building footprint on the map"
+            >
+              <Landmark size={12} /> Footprint-matched
+            </span>
+          )}
           <VerificationBadge status={report.verification} />
         </div>
       </div>
@@ -114,6 +139,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
               <Field label="Damage (required 3-tier)">{DAMAGE_TIER_LABELS[report.damageTier]}</Field>
               <Field label="Grade detail">{damageLabel(report.damage)}</Field>
               <Field label="Infrastructure"><span className="capitalize">{report.infraTypes.join(", ")}</span></Field>
+              {report.infraName && <Field label="Infrastructure name">{report.infraName}</Field>}
               <Field label="Crisis type"><span className="capitalize">{report.crisisNature.join(", ")}</span></Field>
               <Field label="Debris on road"><span className="capitalize">{report.debris}</span></Field>
             </dl>
@@ -173,6 +199,9 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                   </div>
                 </div>
               )}
+              {report.modular?.pressingNeedsOther && (
+                <p className="mt-2 text-[14px] text-ink2">Other: “{report.modular.pressingNeedsOther}”</p>
+              )}
             </Card>
           )}
         </div>
@@ -184,11 +213,34 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
               <ActionBtn active={report.verification === "verified"} color="var(--color-ok)" bg="var(--color-ok-soft)" icon={<CheckCircle2 size={16} />} disabled={busy || !canMutate} onClick={() => verify("verified")}>Verify report</ActionBtn>
               <ActionBtn active={report.verification === "pending"} color="var(--color-warn)" bg="var(--color-warn-soft)" icon={<Clock size={16} />} disabled={busy || !canMutate} onClick={() => verify("pending")}>Mark pending</ActionBtn>
               <ActionBtn active={report.verification === "flagged"} color="var(--color-complete)" bg="var(--color-complete-soft)" icon={<Flag size={16} />} disabled={busy || !canMutate} onClick={() => verify("flagged")}>Flag for review</ActionBtn>
+              {needsForce ? (
+                <VerifyConfirm
+                  note={verifyNote}
+                  onNote={setVerifyNote}
+                  onConfirm={() => verify("verified", true)}
+                  onCancel={() => setNeedsForce(false)}
+                  busy={busy}
+                />
+              ) : (
+                <input
+                  value={verifyNote}
+                  onChange={(e) => setVerifyNote(e.target.value)}
+                  placeholder="Verification note (optional)"
+                  disabled={!canMutate}
+                  className="w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 text-[13px] outline-none placeholder:text-ink3 focus:border-primary disabled:opacity-50"
+                />
+              )}
+              {actionError && (
+                <div className="flex items-start gap-2 rounded-lg border border-warn/40 bg-warn-soft/60 px-3 py-2 text-[12px] text-ink2">
+                  <AlertTriangle size={13} className="mt-0.5 shrink-0 text-warn" />
+                  <span>Action failed — {actionError}</span>
+                </div>
+              )}
             </div>
           </Card>
 
           <Card>
-            <SectionTitle>Dispatch</SectionTitle>
+            <SectionTitle>Triage</SectionTitle>
             <dl className="space-y-2 text-[13px]">
               <Meta label="Task status">{TASK_STATUS_LABELS[report.taskStatus]}</Meta>
               <Meta label="Severity">{SEVERITY_LABELS[report.severity]}</Meta>
@@ -196,7 +248,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
               <Meta label="Clusters">{report.clusters.map((c) => CLUSTER_LABELS[c] ?? c).join(", ") || "—"}</Meta>
             </dl>
             <Link href="/dispatch" className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-2 text-[13px] font-semibold text-white hover:bg-primary-ink">
-              <Radio size={14} /> Manage in Dispatch
+              <ListChecks size={14} /> Open verification & triage
             </Link>
           </Card>
 

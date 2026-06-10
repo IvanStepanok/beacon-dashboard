@@ -2,19 +2,21 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Building2, ShieldAlert, BadgeCheck, ArrowRight, Siren } from "lucide-react";
+import { Building2, ShieldAlert, BadgeCheck, ArrowRight, Siren, Printer } from "lucide-react";
 import { Card, SectionTitle, StatCard, DamageBadge, VerificationBadge } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { ExportButtons } from "@/components/ExportButtons";
+import { PrintBrief } from "@/components/PrintBrief";
 import { TimeSeriesChart } from "@/components/TimeSeriesChart";
 import { DamageBreakdown } from "@/components/DamageBreakdown";
 import { api, type StatsOverview } from "@/lib/api";
-import { relativeTime } from "@/lib/format";
+import { relativeTime, crisisTitle, crisisArea } from "@/lib/format";
 import { DAMAGE_COLORS, TASK_STATUS_LABELS, TASK_STATUS_ORDER, damageColor } from "@/lib/types";
 import type { Crisis, DamageLevel } from "@/lib/types";
 
 export default function OverviewPage() {
   const [s, setS] = useState<StatsOverview | null>(null);
+  const [statsAt, setStatsAt] = useState("");
   const [crisis, setCrisis] = useState<Crisis | null>(null);
 
   useEffect(() => {
@@ -37,7 +39,12 @@ export default function OverviewPage() {
         return api.statsOverview();
       })
       .then((stats) => {
-        if (!cancelled && stats) setS(stats);
+        if (!cancelled && stats) {
+          setS(stats);
+          // Stamp the moment the stats actually landed — PrintBrief prints this
+          // as the data's freshness time, not the moment Ctrl+P was pressed.
+          setStatsAt(new Date().toUTCString());
+        }
       })
       .catch(() => {});
     return () => {
@@ -53,17 +60,31 @@ export default function OverviewPage() {
       {/* Exports inherit the page's crisis scope so downloads match the on-screen stats. */}
       <PageHeader
         title="Overview"
-        subtitle={crisis ? `${crisis.title} · ${crisis.area}${crisis.glide ? ` · ${crisis.glide}` : ""}` : "Crisis overview"}
-        action={<ExportButtons filters={crisis ? { crisisId: crisis.id } : {}} />}
+        subtitle={crisis ? `${crisisTitle(crisis)} · ${crisisArea(crisis)}${crisis.glide ? ` · ${crisis.glide}` : ""}` : "Crisis overview"}
+        action={
+          <div className="flex flex-wrap items-start gap-2">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-line bg-surface px-3.5 py-2 text-[13px] font-semibold text-ink2 transition-colors hover:bg-surface2"
+            >
+              <Printer size={15} /> Print situation brief
+            </button>
+            <ExportButtons filters={crisis ? { crisisId: crisis.id } : {}} />
+          </div>
+        }
       />
 
-      <div className="space-y-6 px-8 py-6">
+      {/* print:hidden (with the header chrome) so that under @media print only
+          the PrintBrief below renders — browser Save-as-PDF = the decision-maker
+          summary (see components/PrintBrief.tsx). */}
+      <div className="space-y-6 px-8 py-6 print:hidden">
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <StatCard label="Reports" value={s.totalReports} sub="from the field" icon={<Building2 size={16} />} />
           <StatCard
             label="Life-safety open"
             value={s.lifeSafetyOpen}
-            sub="people-at-risk · fast lane"
+            sub="open people-at-risk reports"
             icon={<Siren size={16} />}
             accent={DAMAGE_COLORS.destroyed}
           />
@@ -87,11 +108,11 @@ export default function OverviewPage() {
           <SectionTitle
             action={
               <Link href="/dispatch" className="inline-flex items-center gap-1 text-[13px] font-semibold text-primary hover:text-primary-ink">
-                Open dispatch <ArrowRight size={14} />
+                Open board <ArrowRight size={14} />
               </Link>
             }
           >
-            Dispatch board
+            Verification & triage
           </SectionTitle>
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
             {TASK_STATUS_ORDER.map((st) => (
@@ -106,7 +127,7 @@ export default function OverviewPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <SectionTitle>Reporting activity</SectionTitle>
-            <TimeSeriesChart data={s.timeSeries} />
+            <TimeSeriesChart data={s.timeSeries} unit={s.timeSeriesUnit} />
           </Card>
           <Card>
             <SectionTitle>Damage breakdown</SectionTitle>
@@ -161,6 +182,9 @@ export default function OverviewPage() {
           </Card>
         </div>
       </div>
+
+      {/* Print-only: the situation brief is the sole printed artifact. */}
+      <PrintBrief crisis={crisis} stats={s} generatedAt={statsAt} />
     </>
   );
 }

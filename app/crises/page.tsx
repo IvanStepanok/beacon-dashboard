@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
-  Sparkles, Radio, Siren, CheckCircle2, XCircle, MapPin, Globe, Users, Clock,
+  Sparkles, Radio, Siren, CheckCircle2, XCircle, MapPin, Globe, Users, Clock, ChevronDown, SlidersHorizontal,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, SectionTitle } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { crisisTitle, crisisArea } from "@/lib/format";
 import type { Crisis } from "@/lib/types";
 
 // How a crisis came into being — drives the source badge.
@@ -18,11 +19,17 @@ function sourceMeta(source: string): { label: string; icon: typeof Radio; cls: s
 }
 
 export default function CrisesPage() {
-  const { canMutate } = useAuth();
+  const { canMutate, user } = useAuth();
   const [proposed, setProposed] = useState<Crisis[]>([]);
   const [active, setActive] = useState<Crisis[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [showFeed, setShowFeed] = useState(false);
+  // Which active crisis has its capture-form editor open (one at a time).
+  const [formFor, setFormFor] = useState<string | null>(null);
+  // Shaping what every reporter in a crisis is asked is a senior decision —
+  // same RBAC as the backend's PATCH /crises/{id}/form.
+  const canEditForm = user?.role === "regional_analyst" || user?.role === "crisis_admin";
 
   const load = useCallback(() => {
     setLoading(true);
@@ -43,6 +50,19 @@ export default function CrisesPage() {
     finally { setBusy(null); }
   };
 
+  // Action cards are reserved for proposals a human should look at NOW: emergent
+  // citizen clusters and anything that already carries reports. Zero-report feed
+  // ingests (e.g. 150+ auto-ingested USGS quakes) are reference data, not a
+  // review queue — they live in the collapsed section below.
+  const needsReview = useMemo(
+    () => proposed.filter((c) => c.source === "emergent" || (c.reportCount ?? 0) > 0),
+    [proposed],
+  );
+  const feedDetected = useMemo(
+    () => proposed.filter((c) => c.source !== "emergent" && (c.reportCount ?? 0) === 0),
+    [proposed],
+  );
+
   return (
     <div>
       <PageHeader
@@ -56,35 +76,35 @@ export default function CrisesPage() {
       />
 
       <div className="px-8 py-6 space-y-6">
-        {/* ── Emergent proposals awaiting review ───────────────────────── */}
+        {/* ── Proposals worth an analyst's attention ───────────────────── */}
         <section>
           <SectionTitle>
             <span className="flex items-center gap-2">
               <Sparkles size={16} className="text-primary" />
-              Pending review
-              {proposed.length > 0 && (
-                <span className="rounded-full bg-primary px-2 py-0.5 text-[12px] font-bold text-white">{proposed.length}</span>
+              Needs review
+              {needsReview.length > 0 && (
+                <span className="rounded-full bg-primary px-2 py-0.5 text-[12px] font-bold text-white">{needsReview.length}</span>
               )}
             </span>
           </SectionTitle>
 
           {loading ? (
             <p className="text-[14px] text-ink3">Loading…</p>
-          ) : proposed.length === 0 ? (
+          ) : needsReview.length === 0 ? (
             <Card><p className="text-[14px] text-ink3">No emergent crises awaiting review. A cluster of citizen reports in one place + time auto-proposes one here.</p></Card>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
-              {proposed.map((c) => {
+              {needsReview.map((c) => {
                 const sm = sourceMeta(c.source);
                 return (
                   <Card key={c.id} className="border-primary/30">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h3 className="flex items-center gap-1.5 text-[16px] font-bold text-ink">
-                          <Siren size={16} className="shrink-0 text-primary" /> {c.title}
+                          <Siren size={16} className="shrink-0 text-primary" /> {crisisTitle(c)}
                         </h3>
                         <p className="mt-0.5 flex items-center gap-1.5 text-[13px] text-ink2">
-                          <MapPin size={13} /> {c.area} · <span className="capitalize">{c.nature}</span>
+                          <MapPin size={13} /> {crisisArea(c)} · <span className="capitalize">{c.nature}</span>
                         </p>
                       </div>
                       <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${sm.cls}`}>
@@ -120,7 +140,63 @@ export default function CrisesPage() {
           )}
         </section>
 
-        {/* ── Active crises ─────────────────────────────────────────────── */}
+        {/* ── Feed-detected events (zero-report ingests, collapsed) ────── */}
+        {feedDetected.length > 0 && (
+          <section>
+            <button
+              onClick={() => setShowFeed((v) => !v)}
+              className="flex w-full items-center gap-2 rounded-xl px-1 py-1 text-left text-[15px] font-bold text-ink hover:text-primary-ink"
+            >
+              <ChevronDown size={16} className={`text-ink3 transition-transform ${showFeed ? "" : "-rotate-90"}`} />
+              Feed-detected events ({feedDetected.length})
+              <span className="ml-1 text-[12px] font-normal text-ink3">auto-ingested · no citizen reports yet</span>
+            </button>
+            {showFeed && (
+              <Card className="mt-2">
+                <ul className="divide-y divide-line">
+                  {feedDetected.map((c) => {
+                    const sm = sourceMeta(c.source);
+                    return (
+                      <li key={c.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                        <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${sm.cls}`}>
+                          <sm.icon size={12} /> {sm.label}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[14px] font-medium text-ink">{crisisTitle(c)}</div>
+                          <div className="truncate text-[12px] text-ink3">
+                            {crisisArea(c)} · <span className="capitalize">{c.nature}</span> · {c.startedAgoHrs}h ago
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 gap-1.5">
+                          <button
+                            disabled={busy === c.id || !canMutate}
+                            onClick={() => decide(c.id, "active")}
+                            title="Confirm crisis"
+                            aria-label="Confirm crisis"
+                            className="grid h-7 w-7 place-items-center rounded-lg text-ink3 hover:bg-ok-soft hover:text-ok disabled:opacity-40"
+                          >
+                            <CheckCircle2 size={15} />
+                          </button>
+                          <button
+                            disabled={busy === c.id || !canMutate}
+                            onClick={() => decide(c.id, "dismissed")}
+                            title="Dismiss"
+                            aria-label="Dismiss"
+                            className="grid h-7 w-7 place-items-center rounded-lg text-ink3 hover:bg-complete-soft hover:text-complete disabled:opacity-40"
+                          >
+                            <XCircle size={15} />
+                          </button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </Card>
+            )}
+          </section>
+        )}
+
+        {/* ── Active crises (senior roles can adjust the capture form) ───── */}
         <section>
           <SectionTitle>
             <span className="flex items-center gap-2"><Globe size={16} className="text-ink2" /> Active crises · {active.length}</span>
@@ -135,16 +211,29 @@ export default function CrisesPage() {
                 {active.map((c) => {
                   const sm = sourceMeta(c.source);
                   return (
-                    <li key={c.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-                      <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${sm.cls}`}><sm.icon size={16} /></span>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate text-[14px] font-semibold text-ink">{c.title}</div>
-                        <div className="truncate text-[12px] text-ink3">
-                          {c.area} · <span className="capitalize">{c.nature}</span> · {c.reportCount} reports · {c.startedAgoHrs}h ago
-                          {c.glide && <span className="ml-1.5 font-mono">{c.glide}</span>}
+                    <li key={c.id} className="py-3 first:pt-0 last:pb-0">
+                      <div className="flex items-center gap-3">
+                        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${sm.cls}`}><sm.icon size={16} /></span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-[14px] font-semibold text-ink">{crisisTitle(c)}</div>
+                          <div className="truncate text-[12px] text-ink3">
+                            {crisisArea(c)} · <span className="capitalize">{c.nature}</span> · {c.reportCount} reports · {c.startedAgoHrs}h ago
+                            {c.glide && <span className="ml-1.5 font-mono">{c.glide}</span>}
+                          </div>
                         </div>
+                        {canEditForm && (
+                          <button
+                            onClick={() => setFormFor((v) => (v === c.id ? null : c.id))}
+                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[12px] font-semibold transition-colors ${
+                              formFor === c.id ? "border-primary bg-primary-soft text-primary-ink" : "border-line text-ink2 hover:bg-surface2"
+                            }`}
+                          >
+                            <SlidersHorizontal size={13} /> Capture form
+                          </button>
+                        )}
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${sm.cls}`}>{sm.label}</span>
                       </div>
-                      <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${sm.cls}`}>{sm.label}</span>
+                      {canEditForm && formFor === c.id && <CrisisFormEditor crisisId={c.id} />}
                     </li>
                   );
                 })}
@@ -153,6 +242,128 @@ export default function CrisesPage() {
           </Card>
         </section>
       </div>
+    </div>
+  );
+}
+
+// ── Capture-form editor (the per-crisis form-overrides headline feature) ──
+
+// Known modular sections with title fallbacks: the resolved GET omits disabled
+// sections entirely, so the editor needs local titles to keep their rows visible.
+const FORM_SECTION_TITLES: Record<string, string> = {
+  electricity: "Electricity infrastructure condition",
+  healthServices: "Health services functioning",
+  pressingNeeds: "Most pressing needs",
+};
+
+type SectionMode = "default" | "required" | "disabled";
+
+/**
+ * Compact per-crisis editor over the modular capture form: each Appendix-1
+ * section is optional by default, can be flipped to required, or disabled
+ * (removed from the form reporters see). Loads the resolved schema from
+ * GET /form-schema?crisisId=X (absent section ⇒ disabled), saves overrides via
+ * PATCH /crises/{id}/form. Rendered for regional_analyst / crisis_admin only —
+ * the backend enforces the same RBAC + crisis scope.
+ */
+function CrisisFormEditor({ crisisId }: { crisisId: string }) {
+  const [modes, setModes] = useState<Record<string, SectionMode> | null>(null);
+  const [titles, setTitles] = useState<Record<string, string>>(FORM_SECTION_TITLES);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .formSchema(crisisId)
+      .then((schema) => {
+        if (cancelled) return;
+        // Known sections missing from the resolved schema are disabled; present
+        // ones carry their requiredness. Unknown (future) keys render too.
+        const next: Record<string, SectionMode> = {};
+        const t = { ...FORM_SECTION_TITLES };
+        for (const key of Object.keys(FORM_SECTION_TITLES)) next[key] = "disabled";
+        for (const s of schema.sections) {
+          next[s.key] = s.required ? "required" : "default";
+          t[s.key] = s.title;
+        }
+        setModes(next);
+        setTitles(t);
+      })
+      .catch(() => {
+        if (!cancelled) setMsg({ ok: false, text: "Could not load the form schema." });
+      });
+    return () => { cancelled = true; };
+  }, [crisisId]);
+
+  const setMode = (key: string, mode: SectionMode) =>
+    setModes((m) => (m ? { ...m, [key]: mode } : m));
+
+  const save = async () => {
+    if (!modes || saving) return;
+    setSaving(true);
+    setMsg(null);
+    try {
+      await api.patchCrisisForm(crisisId, {
+        required: Object.keys(modes).filter((k) => modes[k] === "required"),
+        disabled: Object.keys(modes).filter((k) => modes[k] === "disabled"),
+      });
+      setMsg({ ok: true, text: "Saved — reporters get the updated form on their next sync." });
+    } catch (e) {
+      setMsg({ ok: false, text: `Save failed — ${e instanceof Error ? e.message : "network error"}` });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-xl border border-line bg-surface2/40 p-3">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink3">
+        Capture form · modular sections
+      </div>
+      {!modes ? (
+        <p className="text-[12px] text-ink3">{msg ? msg.text : "Loading form…"}</p>
+      ) : (
+        <>
+          <div className="flex flex-col gap-1.5">
+            {Object.keys(modes).map((key) => (
+              <div key={key} className="flex items-center gap-4">
+                <span className="min-w-0 flex-1 truncate text-[13px] text-ink">{titles[key] ?? key}</span>
+                <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[12px] font-medium text-ink2">
+                  <input
+                    type="checkbox"
+                    checked={modes[key] === "required"}
+                    onChange={(e) => setMode(key, e.target.checked ? "required" : "default")}
+                    className="accent-primary"
+                  />
+                  Required
+                </label>
+                <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[12px] font-medium text-ink2">
+                  <input
+                    type="checkbox"
+                    checked={modes[key] === "disabled"}
+                    onChange={(e) => setMode(key, e.target.checked ? "disabled" : "default")}
+                    className="accent-primary"
+                  />
+                  Disabled
+                </label>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              disabled={saving}
+              onClick={save}
+              className="rounded-lg bg-primary px-3 py-1.5 text-[12px] font-semibold text-white hover:bg-primary-ink disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save form"}
+            </button>
+            {msg && (
+              <span className={`text-[12px] font-medium ${msg.ok ? "text-ok" : "text-warn"}`}>{msg.text}</span>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

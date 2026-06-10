@@ -27,11 +27,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (!getToken()) {
+    // /login is where we bounce to; /public is login-free (community view) —
+    // neither may redirect to /login, with or without a token. Standalone routes
+    // also skip the me() bootstrap entirely: /public must never spend the stored
+    // analyst JWT (a transient 401 there would silently clear the session).
+    const standalone = pathname === "/login" || pathname === "/public";
+    if (!getToken() || standalone) {
       // Initial auth bootstrap: synchronously settling loading on mount is intentional.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false);
-      if (pathname !== "/login") router.replace("/login");
+      if (!getToken() && !standalone) router.replace("/login");
       return;
     }
     api
@@ -39,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(setUser)
       .catch(() => {
         clearToken();
-        if (pathname !== "/login") router.replace("/login");
+        router.replace("/login");
       })
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -53,6 +53,28 @@ export function coordsLabel(
   return landmark ? `Location unresolved · landmark: ${landmark}` : "Location unresolved";
 }
 
+/**
+ * Crisis title with a graceful fallback: legacy emergent titles were built from
+ * the report's place and can carry the useless "Your location" stamp until data
+ * cleanup (the backend now derives titles from admin areas) — render a neutral
+ * coordinate-anchored name instead of the placeholder.
+ */
+export function crisisTitle(c: { title?: string; lat: number; lng: number }): string {
+  const t = (c.title ?? "").trim();
+  if (t && !/your location/i.test(t)) return t;
+  return `Unnamed event near ${c.lat.toFixed(2)}, ${c.lng.toFixed(2)}`;
+}
+
+/**
+ * Crisis area with the same "Your location" guard as crisisTitle: legacy
+ * emergent rows stamped the reporter-side placeholder into `area` too.
+ */
+export function crisisArea(c: { area?: string; lat: number; lng: number }): string {
+  const a = (c.area ?? "").trim();
+  if (a && !/your location/i.test(a)) return a;
+  return `near ${c.lat.toFixed(2)}, ${c.lng.toFixed(2)}`;
+}
+
 type AdminLike = { name?: string } | undefined;
 /**
  * Best available admin area for the Area column: the deepest resolved level

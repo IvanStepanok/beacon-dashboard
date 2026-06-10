@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Beacon Analyst Console
 
-## Getting Started
+**Next.js 16 + React 19 + Tailwind 4 + MapLibre** web client for Beacon — the open-source
+crisis-damage crowdsourcing system. Talks to the Go backend's live API (no mock layer),
+with JWT auth and role-based UI gating.
 
-First, run the development server:
+## Pages
+
+| Route | What it is |
+| --- | --- |
+| `/` | **Overview** — crisis-scoped stats, 3-tier damage rollup (+ EMS-98 detail), activity time-series, most-affected areas, recent reports. "Print situation brief" renders a print-only decision-maker summary (browser Save-as-PDF). |
+| `/crises` | Crisis registry: active/closed list plus the emergent-proposal review queue (confirm/dismiss, senior roles only). |
+| `/dispatch` | **Verification & triage** — life-safety fast lane, verify/flag with audited decisions (force-verify requires a note), assign/advance/close tasks. |
+| `/map` | **Live map** — clustered report pins, damage/verification/life-safety filters, crisis selector, 30s polling. |
+| `/reports` | Filterable report table with inline detail panel, per-building damage timeline, authenticated photo view. |
+| `/settings` | Global capture scale (tier3 / EMS-98) and on-demand external feed refresh (USGS/GDACS). |
+| `/login` | JWT sign-in; demo accounts are listed on the page. |
+| `/public` | **Community view, no login** — aggregated damage heatmap + area-level counts only. Verified reports, coordinates coarsened to ~110 m by the backend, zoom capped, no individual pins at any zoom. EN/AR toggle (RTL). |
+
+## Auth & roles
+
+`POST /auth/login` returns a JWT kept in `localStorage` and sent as a `Bearer` header by
+`lib/api.ts`. Five roles, enforced **server-side** (the UI only hides what a role cannot
+do): `crisis_admin` and `regional_analyst` (full, incl. crisis lifecycle), `co_analyst`
+and `field_validator` (verify/triage within their crisis scope), `external_viewer`
+(read-only; the backend serves it the same verified-only coarsened projection as
+anonymous callers). `/public` uses the anonymous tier — no token at all.
+
+## How it talks to the API
+
+All calls go through `lib/api.ts`: `api.*` attaches the analyst JWT (401 → token dropped,
+bounce to `/login`); `publicApi.*` deliberately sends **no** Authorization header so the
+backend applies the public anonymous tier. Endpoints used include `/stats/overview`,
+`/reports` (keyset pagination via opaque `nextCursor`), `/reports/export`
+(GeoJSON / HXL-CSV / GeoPackage / PDNA), `/map/features`, `/reports/area-groups` and
+`/crises/*`. Contract: `backend/openapi.yaml`.
+
+**Why the analyst map uses REST + a truncation banner instead of the MVT tile endpoint:**
+the backend already serves vector tiles (`/api/v1/tiles/reports/{z}/{x}/{y}`, both trust
+tiers), but the analyst map today loads reports via paged REST (`listAllReports`: keyset
+pages of 200, hard-capped at 25 pages = 5,000 reports) because the map's client-side
+filters, pin selection and detail panel all need full report objects in memory. When the
+cap is hit, a `TruncationBanner` says honestly how many of the total are shown rather than
+silently dropping data. Switching the map source to the MVT endpoint is the documented
+scale path once a single crisis routinely exceeds the cap.
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # http://localhost:3000, against NEXT_PUBLIC_BEACON_API
+npm run lint && npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Build & deploy
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`NEXT_PUBLIC_BEACON_API` points at the backend; it defaults to `http://localhost:8080`
+and is **baked into the client bundle at build time** (`NEXT_PUBLIC_*` = public, not a
+secret) — rebuild to change it (`.env.production` holds the deployed value). The build
+emits a self-contained server (`output: "standalone"` → `node .next/standalone/server.js`)
+for container deploy.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Languages
 
-## Learn More
+The analyst console is **English-only by design** — it is an internal operations tool for
+UNDP analysts. The multilingual load sits on the citizen-facing surfaces: the mobile
+reporter app ships all 6 UN languages (incl. RTL Arabic), and the `/public` community
+view ships an EN/AR toggle (static dictionary, no i18n framework).
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Apache-2.0 — see [`LICENSE`](./LICENSE). Project docs and honest build status live in the
+main Beacon repo (`docs/STATUS.md`).

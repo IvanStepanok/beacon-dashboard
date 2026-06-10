@@ -34,15 +34,17 @@ export type ElectricityCondition = "none_observed" | "minor" | "moderate" | "sev
 export type HealthServices = "fully_functional" | "partially_functional" | "largely_disrupted" | "not_functioning" | "unknown";
 export type PressingNeed =
   | "food_water" | "cash" | "healthcare" | "shelter" | "livelihoods"
-  | "wash" | "protection" | "local_support" | "other";
+  | "wash" | "protection" | "local_support" | "basic_services" | "other";
 
 // Optional Appendix-1 modular sections. Wire shape (key "modular"): exactly
-// { electricity: string|null, healthServices: string|null, pressingNeeds: string[] }.
+// { electricity: string|null, healthServices: string|null, pressingNeeds: string[] }
+// plus the optional free-text pressingNeedsOther accompanying the "other" need.
 // Values are the mobile enum constant names lowercased (it.name.lowercase()).
 export interface Modular {
   electricity?: ElectricityCondition | string | null;
   healthServices?: HealthServices | string | null;
   pressingNeeds?: (PressingNeed | string)[];
+  pressingNeedsOther?: string | null;
 }
 
 export interface Report {
@@ -51,6 +53,8 @@ export interface Report {
   possiblyDamaged: boolean;
   infra: string[];
   infraTypes: string[];
+  // Reporter-entered name/details of the infrastructure (any type, e.g. a school name).
+  infraName?: string;
   crisis: string[];
   crisisNature: string[];
   debris: DebrisState;
@@ -61,6 +65,9 @@ export interface Report {
   locationResolved?: boolean;
   landmark?: string;
   buildingId?: string;
+  // "footprint" ONLY when a real footprint polygon was tapped on the map — a
+  // trust signal worth surfacing (vs. a free pin or landmark guess).
+  buildingSource?: string;
   what3words?: string;
   plusCode?: string;
   place: string;
@@ -112,11 +119,14 @@ export interface Crisis {
   distanceKm?: number;
 }
 
-export interface DangerZone {
-  id: string;
-  name: string;
-  note: string;
-  severity: "caution" | "warning" | "critical";
+// Area-level aggregate from /reports/area-groups: per-place report count + worst
+// damage (raw grade, either vocabulary) + its canonical 3-tier rollup. Carries
+// NO coordinates — safe to render on the public community view.
+export interface AreaGroup {
+  area: string;
+  count: number;
+  worst: string;
+  worstTier: DamageTier;
 }
 
 // ── display maps ──────────────────────────────────────────────────────
@@ -153,9 +163,10 @@ export const DAMAGE_TIER_ORDER: DamageTier[] = ["minimal", "partial", "complete"
 
 /** Roll up either vocabulary (5-level EMS-98 or 3-tier) to the required 3 tiers. */
 export function rollupTier(d: string): DamageTier {
-  if (d === "none" || d === "slight" || d === "minimal") return "minimal";
   if (d === "moderate" || d === "severe" || d === "partial") return "partial";
-  return "complete";
+  if (d === "destroyed" || d === "complete") return "complete";
+  // none/slight/minimal — and any unknown value, matching the server's RollupTier default.
+  return "minimal";
 }
 
 // Vocabulary-agnostic label/color for any damage value (5-level OR 3-tier).
@@ -240,10 +251,35 @@ export const PRESSING_NEED_LABELS: Record<string, string> = {
   wash: "WASH",
   protection: "Protection",
   local_support: "Local support",
+  basic_services: "Basic services & infrastructure",
   other: "Other",
 };
 
 /** True when at least one modular section carries a value (so views can skip the empty card). */
 export function hasModular(m?: Modular): boolean {
-  return !!m && (!!m.electricity || !!m.healthServices || (m.pressingNeeds?.length ?? 0) > 0);
+  return !!m && (!!m.electricity || !!m.healthServices || (m.pressingNeeds?.length ?? 0) > 0 || !!m.pressingNeedsOther);
+}
+
+// ── Modular capture-form schema (GET /form-schema, PATCH /crises/{id}/form) ──
+
+export interface FormOption {
+  value: string;
+  label: string;
+}
+export interface FormSection {
+  key: string;
+  title: string;
+  type: "single" | "multi";
+  required: boolean;
+  allowOtherText?: boolean;
+  options: FormOption[];
+}
+/** GET /form-schema envelope: the crisis's RESOLVED sections (defaults + overrides; disabled sections omitted). */
+export interface FormSchema {
+  sections: FormSection[];
+}
+/** PATCH /crises/{id}/form body: section keys flipped to required / removed from the form. */
+export interface FormOverrides {
+  required: string[];
+  disabled: string[];
 }
