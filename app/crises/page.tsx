@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
-  Sparkles, Radio, Siren, CheckCircle2, XCircle, MapPin, Globe, Users, Clock, ChevronDown, SlidersHorizontal,
+  Sparkles, Radio, Siren, CheckCircle2, XCircle, MapPin, Globe, Users, Clock, SlidersHorizontal,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, SectionTitle } from "@/components/ui";
@@ -14,7 +14,6 @@ import type { Crisis } from "@/lib/types";
 // How a crisis came into being — drives the source badge.
 function sourceMeta(source: string): { label: string; icon: typeof Radio; cls: string } {
   if (source === "emergent") return { label: "Emergent · citizen cluster", icon: Sparkles, cls: "bg-primary-soft text-primary-ink" };
-  if (source.startsWith("feed:")) return { label: `Feed · ${source.slice(5)}`, icon: Globe, cls: "bg-ok-soft text-ok" };
   return { label: source || "Analyst", icon: Radio, cls: "bg-surface2 text-ink2" };
 }
 
@@ -24,7 +23,6 @@ export default function CrisesPage() {
   const [active, setActive] = useState<Crisis[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
-  const [showFeed, setShowFeed] = useState(false);
   // Which active crisis has its capture-form editor open (one at a time).
   const [formFor, setFormFor] = useState<string | null>(null);
   // Shaping what every reporter in a crisis is asked is a senior decision —
@@ -50,18 +48,9 @@ export default function CrisesPage() {
     finally { setBusy(null); }
   };
 
-  // Action cards are reserved for proposals a human should look at NOW: emergent
-  // citizen clusters and anything that already carries reports. Zero-report feed
-  // ingests (e.g. 150+ auto-ingested USGS quakes) are reference data, not a
-  // review queue — they live in the collapsed section below.
-  const needsReview = useMemo(
-    () => proposed.filter((c) => c.source === "emergent" || (c.reportCount ?? 0) > 0),
-    [proposed],
-  );
-  const feedDetected = useMemo(
-    () => proposed.filter((c) => c.source !== "emergent" && (c.reportCount ?? 0) === 0),
-    [proposed],
-  );
+  // Every proposed crisis is a community-EMERGENT one — a cluster of citizen reports
+  // in one place + time auto-proposes it — so they all warrant an analyst's review.
+  const needsReview = proposed;
 
   return (
     <div>
@@ -139,62 +128,6 @@ export default function CrisesPage() {
             </div>
           )}
         </section>
-
-        {/* ── Feed-detected events (zero-report ingests, collapsed) ────── */}
-        {feedDetected.length > 0 && (
-          <section>
-            <button
-              onClick={() => setShowFeed((v) => !v)}
-              className="flex w-full items-center gap-2 rounded-xl px-1 py-1 text-left text-[15px] font-bold text-ink hover:text-primary-ink"
-            >
-              <ChevronDown size={16} className={`text-ink3 transition-transform ${showFeed ? "" : "-rotate-90"}`} />
-              Feed-detected events ({feedDetected.length})
-              <span className="ml-1 text-[12px] font-normal text-ink3">auto-ingested · no citizen reports yet</span>
-            </button>
-            {showFeed && (
-              <Card className="mt-2">
-                <ul className="divide-y divide-line">
-                  {feedDetected.map((c) => {
-                    const sm = sourceMeta(c.source);
-                    return (
-                      <li key={c.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-                        <span className={`shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${sm.cls}`}>
-                          <sm.icon size={12} /> {sm.label}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-[14px] font-medium text-ink">{crisisTitle(c)}</div>
-                          <div className="truncate text-[12px] text-ink3">
-                            {crisisArea(c)} · <span className="capitalize">{c.nature}</span> · {c.startedAgoHrs}h ago
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 gap-1.5">
-                          <button
-                            disabled={busy === c.id || !canMutate}
-                            onClick={() => decide(c.id, "active")}
-                            title="Confirm crisis"
-                            aria-label="Confirm crisis"
-                            className="grid h-7 w-7 place-items-center rounded-lg text-ink3 hover:bg-ok-soft hover:text-ok disabled:opacity-40"
-                          >
-                            <CheckCircle2 size={15} />
-                          </button>
-                          <button
-                            disabled={busy === c.id || !canMutate}
-                            onClick={() => decide(c.id, "dismissed")}
-                            title="Dismiss"
-                            aria-label="Dismiss"
-                            className="grid h-7 w-7 place-items-center rounded-lg text-ink3 hover:bg-complete-soft hover:text-complete disabled:opacity-40"
-                          >
-                            <XCircle size={15} />
-                          </button>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Card>
-            )}
-          </section>
-        )}
 
         {/* ── Active crises (senior roles can adjust the capture form) ───── */}
         <section>
