@@ -2,81 +2,53 @@
 
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { Map as MlMap, GeoJSONSource, MapGeoJSONFeature } from "maplibre-gl";
+import type { Map as MlMap, GeoJSONSource } from "maplibre-gl";
+import { getToken } from "@/lib/api";
 import { DAMAGE_TIER_COLORS } from "@/lib/types";
-import type { Report } from "@/lib/types";
 
 const ANTAKYA = { lat: 36.2021, lng: 36.1601 };
-const SOURCE = "reports";
 const STYLE = "https://tiles.openfreemap.org/styles/liberty";
+const SRC = "reports-mvt"; // vector tile source (server-clustered)
+const SEL = "selected-src"; // tiny geojson source for the selection halo
 
-function toFeatureCollection(reports: Report[]) {
-  return {
-    type: "FeatureCollection" as const,
-    // Location-unresolved (landmark-only) reports have lat/lng = null — they have
-    // no point to plot, so they are omitted from the map layer (shown in the list).
-    features: reports
-      .filter((r): r is Report & { lat: number; lng: number } => typeof r.lat === "number" && typeof r.lng === "number")
-      .map((r) => ({
-        type: "Feature" as const,
-        geometry: { type: "Point" as const, coordinates: [r.lng, r.lat] },
-        properties: { id: r.id, damage: r.damage },
-      })),
-  };
-}
+// Tile layer names emitted by the backend ST_AsMVT: 'clusters' (grid counts at
+// low zoom) and 'reports' (latest-per-building points at high zoom). The single
+// vector source carries whichever the current zoom produced.
+const L_CLUSTER = "clusters";
+const L_REPORTS = "reports";
 
-/** Bounding box of the plotted features, or null when nothing has a point. */
-function boundsOf(
-  fc: ReturnType<typeof toFeatureCollection>,
-): [[number, number], [number, number]] | null {
-  if (fc.features.length === 0) return null;
-  let minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity;
-  for (const f of fc.features) {
-    const [lng, lat] = f.geometry.coordinates;
-    if (lng < minLng) minLng = lng;
-    if (lat < minLat) minLat = lat;
-    if (lng > maxLng) maxLng = lng;
-    if (lat > maxLat) maxLat = lat;
-  }
-  return [[minLng, minLat], [maxLng, maxLat]];
-}
-
+/**
+ * Analyst submissions map backed by SERVER-side vector tiles (MVT). Unlike the
+ * prior client-side GeoJSON+cluster source (which capped the map at ~5k loaded
+ * reports), this renders the FULL crisis — 500k+ — because clustering happens in
+ * PostGIS per tile and only ~1 KB of vector geometry crosses the wire per tile.
+ * The analyst JWT rides on tile requests via transformRequest. `tileUrl` is the
+ * `{z}/{x}/{y}` template (already carrying crisisId + filter query params); the
+ * map re-points its source when it changes.
+ */
 export function SubmissionsMap({
-  reports,
+  tileUrl,
   selectedId,
+  selectedPoint,
   onSelect,
   center,
 }: {
-  reports: Report[];
+  tileUrl: string;
   selectedId: string | null;
-  onSelect: (id: string) => void;
-  /** Initial view center (e.g. the scoped crisis's center); ANTAKYA when absent. */
+  /** lng/lat of the selected report, for the halo (set by the parent on select). */
+  selectedPoint: { lng: number; lat: number } | null;
+  onSelect: (id: string, lngLat: { lng: number; lat: number }) => void;
   center?: { lat: number; lng: number };
 }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const readyRef = useRef(false);
-  // One-shot: fit the view to the FIRST non-empty data load, then never again —
-  // later filter/selection updates must not yank the analyst's viewport around.
-  const fitDoneRef = useRef(false);
-  // Previous selection — the camera eases ONLY when the selected id itself
-  // changes, never when a poll swaps the `reports` array identity.
-  const prevSelectedRef = useRef<string | null>(null);
   const onSelectRef = useRef(onSelect);
-  const reportsRef = useRef(reports);
-  // Keep the latest values without re-running the map-init effect; intentional.
+  const tileUrlRef = useRef(tileUrl);
   // eslint-disable-next-line react-hooks/refs
   onSelectRef.current = onSelect;
   // eslint-disable-next-line react-hooks/refs
-  reportsRef.current = reports;
-
-  const fitOnce = (map: MlMap, fc: ReturnType<typeof toFeatureCollection>) => {
-    if (fitDoneRef.current) return;
-    const bounds = boundsOf(fc);
-    if (!bounds) return;
-    fitDoneRef.current = true;
-    map.fitBounds(bounds, { padding: 48, maxZoom: 15 });
-  };
+  tileUrlRef.current = tileUrl;
 
   // Create the map once.
   useEffect(() => {
@@ -91,58 +63,74 @@ export function SubmissionsMap({
         container: container.current,
         style: STYLE,
         center: center ? [center.lng, center.lat] : [ANTAKYA.lng, ANTAKYA.lat],
-        zoom: 12.4,
+        zoom: 11,
         attributionControl: { compact: true },
+        // The analyst JWT can't ride on a bare tile GET, so inject it here for our
+        // API tile requests only (never the public basemap on another origin).
+        transformRequest: (url) => {
+          if (url.includes("/api/v1/tiles/")) {
+            const t = getToken();
+            return t ? { url, headers: { Authorization: `Bearer ${t}` } } : { url };
+          }
+          return undefined;
+        },
       });
       mapRef.current = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
       map.on("load", () => {
         if (!map) return;
-        // Read through the ref: reports may have arrived while the style loaded.
-        const fc = toFeatureCollection(reportsRef.current);
-        map.addSource(SOURCE, {
-          type: "geojson",
-          data: fc,
-          cluster: true,
-          clusterRadius: 48,
-          clusterMaxZoom: 14,
+        map.addSource(SRC, {
+          type: "vector",
+          tiles: [tileUrlRef.current],
+          minzoom: 0,
+          maxzoom: 16, // backend emits points for any z>=13; overzoom beyond 16
         });
+        map.addSource(SEL, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
 
+        const tierMatch = [
+          "match",
+          ["get", "worst"],
+          0, DAMAGE_TIER_COLORS.minimal,
+          1, DAMAGE_TIER_COLORS.partial,
+          2, DAMAGE_TIER_COLORS.complete,
+          "#999999",
+        ] as unknown as string;
+
+        // Low-zoom cluster bubbles (source-layer 'clusters': n=count, worst=tier).
         map.addLayer({
-          id: "clusters",
+          id: "cluster-circles",
           type: "circle",
-          source: SOURCE,
-          filter: ["has", "point_count"],
+          source: SRC,
+          "source-layer": L_CLUSTER,
           paint: {
-            "circle-color": "#6e4fc4",
-            "circle-opacity": 0.9,
-            "circle-radius": ["step", ["get", "point_count"], 16, 5, 22, 15, 30],
-            "circle-stroke-width": 3,
+            "circle-color": tierMatch,
+            "circle-opacity": 0.85,
+            "circle-radius": ["interpolate", ["linear"], ["get", "n"], 1, 12, 50, 20, 500, 30, 5000, 42],
+            "circle-stroke-width": 2,
             "circle-stroke-color": "#ffffff",
           },
         });
         map.addLayer({
           id: "cluster-count",
           type: "symbol",
-          source: SOURCE,
-          filter: ["has", "point_count"],
+          source: SRC,
+          "source-layer": L_CLUSTER,
           layout: {
-            "text-field": ["get", "point_count_abbreviated"],
+            "text-field": ["to-string", ["get", "n"]],
             "text-font": ["Noto Sans Bold"],
-            "text-size": 13,
+            "text-size": 12,
           },
-          paint: { "text-color": "#ffffff" },
+          paint: { "text-color": "#ffffff", "text-halo-color": "rgba(0,0,0,0.25)", "text-halo-width": 1 },
         });
 
-        // Selected halo (drawn under the point).
+        // Selection halo (under the points).
         map.addLayer({
           id: "selected-halo",
           type: "circle",
-          source: SOURCE,
-          filter: ["==", ["get", "id"], ""],
+          source: SEL,
           paint: {
-            "circle-radius": 16,
+            "circle-radius": 15,
             "circle-color": "#6e4fc4",
             "circle-opacity": 0.18,
             "circle-stroke-width": 2,
@@ -150,11 +138,12 @@ export function SubmissionsMap({
           },
         });
 
+        // High-zoom individual points (source-layer 'reports': id, damage).
         map.addLayer({
-          id: "unclustered",
+          id: "report-points",
           type: "circle",
-          source: SOURCE,
-          filter: ["!", ["has", "point_count"]],
+          source: SRC,
+          "source-layer": L_REPORTS,
           paint: {
             "circle-color": [
               "match",
@@ -170,73 +159,62 @@ export function SubmissionsMap({
           },
         });
 
-        // Interactions
-        map.on("click", "clusters", async (e) => {
-          const f = e.features?.[0] as MapGeoJSONFeature | undefined;
-          if (!f) return;
-          const clusterId = f.properties.cluster_id as number;
-          const src = map!.getSource(SOURCE) as GeoJSONSource;
-          const zoom = await src.getClusterExpansionZoom(clusterId);
-          map!.easeTo({
-            center: (f.geometry as GeoJSON.Point).coordinates as [number, number],
-            zoom,
-          });
+        // Click a cluster → zoom toward it; click a point → select it.
+        map.on("click", "cluster-circles", (e) => {
+          const c = (e.features?.[0]?.geometry as GeoJSON.Point | undefined)?.coordinates as
+            | [number, number]
+            | undefined;
+          if (c) map!.easeTo({ center: c, zoom: Math.min(map!.getZoom() + 2.5, 16) });
         });
-        map.on("click", "unclustered", (e) => {
+        map.on("click", "report-points", (e) => {
           const f = e.features?.[0];
-          if (f?.properties?.id) onSelectRef.current(String(f.properties.id));
+          const c = (f?.geometry as GeoJSON.Point | undefined)?.coordinates as [number, number] | undefined;
+          if (f?.properties?.id && c) onSelectRef.current(String(f.properties.id), { lng: c[0], lat: c[1] });
         });
-        for (const layer of ["clusters", "unclustered"]) {
-          map.on("mouseenter", layer, () => {
-            map!.getCanvas().style.cursor = "pointer";
-          });
-          map.on("mouseleave", layer, () => {
-            map!.getCanvas().style.cursor = "";
-          });
+        for (const layer of ["cluster-circles", "report-points"]) {
+          map.on("mouseenter", layer, () => { map!.getCanvas().style.cursor = "pointer"; });
+          map.on("mouseleave", layer, () => { map!.getCanvas().style.cursor = ""; });
         }
 
         readyRef.current = true;
-        fitOnce(map, fc);
       });
     })();
 
     return () => {
       disposed = true;
       readyRef.current = false;
-      fitDoneRef.current = false;
-      prevSelectedRef.current = null;
       mapRef.current = null;
       map?.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Update data when filters change.
+  // Re-point the vector source when the tile URL (crisis/filters) changes.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
-    const src = map.getSource(SOURCE) as GeoJSONSource | undefined;
-    if (!src) return;
-    const fc = toFeatureCollection(reports);
-    src.setData(fc);
-    fitOnce(map, fc);
-  }, [reports]);
+    const src = map.getSource(SRC) as (GeoJSONSource & { setTiles?: (u: string[]) => void }) | undefined;
+    // VectorTileSource.setTiles swaps the template and refreshes in place (no remount).
+    const vsrc = src as unknown as { setTiles?: (u: string[]) => void } | undefined;
+    if (vsrc?.setTiles) vsrc.setTiles([tileUrl]);
+  }, [tileUrl]);
 
-  // Update selected halo + fly to selection. The ease-to is guarded on the
-  // PREVIOUS selected id: the 30s poll re-creates `reports` (new array identity)
-  // and must not snap the camera back to a pin the analyst already panned away from.
+  // Selection halo follows the parent's selected point.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
-    map.setFilter("selected-halo", ["==", ["get", "id"], selectedId ?? ""]);
-    if (selectedId && selectedId !== prevSelectedRef.current) {
-      const r = reports.find((x) => x.id === selectedId);
-      if (r && typeof r.lat === "number" && typeof r.lng === "number") {
-        map.easeTo({ center: [r.lng, r.lat], zoom: Math.max(map.getZoom(), 15) });
-      }
+    const sel = map.getSource(SEL) as GeoJSONSource | undefined;
+    if (!sel) return;
+    if (selectedId && selectedPoint) {
+      sel.setData({
+        type: "FeatureCollection",
+        features: [{ type: "Feature", geometry: { type: "Point", coordinates: [selectedPoint.lng, selectedPoint.lat] }, properties: {} }],
+      });
+      map.easeTo({ center: [selectedPoint.lng, selectedPoint.lat], zoom: Math.max(map.getZoom(), 15) });
+    } else {
+      sel.setData({ type: "FeatureCollection", features: [] });
     }
-    prevSelectedRef.current = selectedId;
-  }, [selectedId, reports]);
+  }, [selectedId, selectedPoint]);
 
   return <div ref={container} className="h-full w-full" />;
 }

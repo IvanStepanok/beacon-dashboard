@@ -5,8 +5,8 @@ import Link from "next/link";
 import { X, MapPin, ArrowRight, Sparkles } from "lucide-react";
 import { SubmissionsMap } from "@/components/SubmissionsMap";
 import { DamageBadge, VerificationBadge } from "@/components/ui";
-import { UpdatedAgo, TruncationBanner } from "@/components/Freshness";
-import { api } from "@/lib/api";
+import { UpdatedAgo } from "@/components/Freshness";
+import { api, API_BASE } from "@/lib/api";
 import { relativeTime, locationLabel, coordsLabel, crisisTitle } from "@/lib/format";
 import {
   DAMAGE_TIER_COLORS, DAMAGE_TIER_LABELS, DAMAGE_TIER_ORDER, CLUSTER_LABELS, damageLabel,
@@ -16,12 +16,16 @@ import {
 const VERIF_FILTERS: Verification[] = ["verified", "pending", "flagged"];
 
 export default function MapPage() {
-  const [all, setAll] = useState<Report[]>([]);
   const [total, setTotal] = useState(0);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
   const [damage, setDamage] = useState<Set<DamageTier>>(new Set());
   const [verif, setVerif] = useState<Set<Verification>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The selected report is fetched on demand (the map renders server-side vector
+  // tiles now, so the full row is not already in memory). selectedPoint feeds the
+  // map's halo from the clicked tile feature's geometry.
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<{ lng: number; lat: number } | null>(null);
   // Crisis scope: the map is always scoped to ONE crisis (default = active).
   // Unlike /reports there is no "All crises" option — a multi-crisis point soup
   // on one basemap reads as noise. Unscoped only as a last-resort fallback.
@@ -48,40 +52,52 @@ export default function MapPage() {
     return () => { cancelled = true; };
   }, []);
 
-  // Load reports only after the crisis scope is resolved (avoids a flash of
-  // the unscoped world before the active crisis arrives). A 30s silent re-fetch
-  // keeps the map near-real-time (M3); viewport and filters are untouched —
-  // the map only remounts when the crisis scope (its key) changes.
+  // Total count for the header — a single stats aggregate, not a row pull. A 30s
+  // silent re-fetch keeps it near-real-time (M3); the map tiles carry their own
+  // 30s cache, so panning/zooming re-fetches live geometry independently.
   useEffect(() => {
     if (!scopeReady) return;
     let cancelled = false;
-    const fetchReports = () =>
+    const fetchTotal = () =>
       api
-        .listAllReports({ crisisId: selectedCrisis || undefined, pageSize: 200 }, { signal: () => cancelled })
-        .then((r) => {
+        .statsOverview(selectedCrisis || undefined)
+        .then((s) => {
           if (cancelled) return;
-          setAll(r.items);
-          setTotal(r.total);
+          setTotal(s.totalReports ?? 0);
           setUpdatedAt(Date.now());
         })
-        // A failed poll (API blip) keeps the last data on screen; the UpdatedAgo
-        // stamp stops advancing, which IS the staleness signal — no rejection leaks.
         .catch(() => {});
-    fetchReports();
-    const t = setInterval(fetchReports, 30_000);
+    fetchTotal();
+    const t = setInterval(fetchTotal, 30_000);
     return () => { cancelled = true; clearInterval(t); };
   }, [scopeReady, selectedCrisis]);
 
-  const filtered = useMemo(
-    () =>
-      all.filter(
-        (r) =>
-          (damage.size === 0 || damage.has(r.damage)) &&
-          (verif.size === 0 || verif.has(r.verification)),
-      ),
-    [all, damage, verif],
-  );
-  const selected = filtered.find((r) => r.id === selectedId) ?? null;
+  // The MVT tile template: server-side clustering + filtering means the whole
+  // crisis (50k–500k) renders without ever pulling rows into the browser. Filters
+  // ride as repeated query params; changing them re-points the source in place.
+  const tileUrl = useMemo(() => {
+    const p = new URLSearchParams();
+    if (selectedCrisis) p.set("crisisId", selectedCrisis);
+    for (const d of damage) p.append("damage", d);
+    for (const v of verif) p.append("verification", v);
+    const qs = p.toString();
+    return `${API_BASE}/api/v1/tiles/reports/{z}/{x}/{y}${qs ? `?${qs}` : ""}`;
+  }, [selectedCrisis, damage, verif]);
+
+  // Fetch the clicked report's full row on demand (the tile only carries id+damage).
+  // selectedReport is cleared in the event handlers that clear selectedId (close /
+  // crisis switch / picking another pin), so the effect only ever fetches.
+  useEffect(() => {
+    if (!selectedId) return;
+    let cancelled = false;
+    api.report(selectedId).then((r) => { if (!cancelled) setSelectedReport(r); }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [selectedId]);
+
+  // Clear both ids and the fetched row; used by the close button and crisis switch.
+  const clearSelection = () => { setSelectedId(null); setSelectedPoint(null); setSelectedReport(null); };
+
+  const selected = selectedReport;
 
   const toggle = <T,>(set: Set<T>, v: T, fn: (s: Set<T>) => void) => {
     const next = new Set(set);
@@ -100,7 +116,7 @@ export default function MapPage() {
         {selectedCrisis && (
           <select
             value={selectedCrisis}
-            onChange={(e) => { setSelectedCrisis(e.target.value); setSelectedId(null); }}
+            onChange={(e) => { setSelectedCrisis(e.target.value); clearSelection(); }}
             className="rounded-xl border border-line bg-surface px-3 py-1.5 text-[13px] text-ink outline-none focus:border-primary"
           >
             {crises
@@ -151,25 +167,21 @@ export default function MapPage() {
           })}
         </div>
         <span className="ml-auto flex items-center gap-3 text-[13px] font-medium text-ink2">
-          {filtered.length} of {all.length} shown
+          {total.toLocaleString()} reports
           <UpdatedAgo at={updatedAt} />
         </span>
       </div>
 
       <div className="relative flex-1">
-        <TruncationBanner
-          shown={all.length}
-          total={total}
-          className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 shadow-sm"
-        />
         {/* Keyed by crisis: switching scope remounts the map so the new crisis's
-            center + one-shot fitBounds apply. Filter/selection changes keep the
-            key (and therefore the viewport) stable. */}
+            center applies. Filter changes keep the key (and viewport) stable and
+            re-point the vector source in place. */}
         <SubmissionsMap
           key={selectedCrisis || "unscoped"}
-          reports={filtered}
+          tileUrl={tileUrl}
           selectedId={selectedId}
-          onSelect={setSelectedId}
+          selectedPoint={selectedPoint}
+          onSelect={(id, lngLat) => { setSelectedReport(null); setSelectedId(id); setSelectedPoint(lngLat); }}
           center={crisisObj ? { lat: crisisObj.lat, lng: crisisObj.lng } : undefined}
         />
 
@@ -187,7 +199,7 @@ export default function MapPage() {
           <div className="absolute right-4 top-4 bottom-4 w-80 overflow-y-auto rounded-2xl border border-line bg-surface p-5 shadow-xl shadow-primary/10">
             <div className="flex items-start justify-between">
               <DamageBadge level={selected.damage} />
-              <button onClick={() => setSelectedId(null)} className="grid h-7 w-7 place-items-center rounded-lg text-ink3 hover:bg-surface2">
+              <button onClick={clearSelection} className="grid h-7 w-7 place-items-center rounded-lg text-ink3 hover:bg-surface2">
                 <X size={16} />
               </button>
             </div>
