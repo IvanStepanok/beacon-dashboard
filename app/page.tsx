@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Radar, Globe, MonitorCheck, ArrowRight, Smartphone } from "lucide-react";
 import { PhoneFrame } from "@/components/landing/PhoneFrame";
 import { StoryScroll, Reveal, type StoryBeat } from "@/components/landing/StoryScroll";
-import { MapScreen, CaptureScreen, OfflineScreen, SyncScreen, VerifyScreen } from "@/components/landing/screens";
+import { MapHomeScreen, CaptureDamageScreen, ReportsScreen, ReportDetailScreen } from "@/components/landing/screens";
 
 /* Inline image punctuation for the hero headline — type-height, rounded. */
 function InlineImg({ src, alt }: { src: string; alt: string }) {
@@ -28,7 +28,7 @@ const BEATS: StoryBeat[] = [
       "Photos are EXIF-stripped and faces blurred before anything leaves the phone",
       "Reports snap to the actual building footprint, not a fuzzy street point",
     ],
-    screen: <CaptureScreen />,
+    screen: <CaptureDamageScreen />,
   },
   {
     kicker: "Offline",
@@ -39,29 +39,29 @@ const BEATS: StoryBeat[] = [
       "Reports queue on disk, not in memory — restart-proof",
       "Plus Codes give a shareable address when street signs are gone",
     ],
-    screen: <OfflineScreen />,
+    screen: <ReportsScreen offline />,
   },
   {
     kicker: "Sync",
     title: "When one bar returns, the record catches up",
-    body: "The outbox flushes automatically on reconnect. Submits are idempotent, so retries can never double-count a building — and if two neighbours report the same damage, the server merges them into one versioned record instead of inflating the count.",
+    body: "The outbox flushes automatically on reconnect. Submits are idempotent, so retries can never double-count a building — and if two neighbours report the same damage, the server rejects the duplicate and folds it into one versioned record instead of inflating the count.",
     facts: [
       "Automatic background sync on reconnect",
       "Server-side spatial dedup — agreement raises confidence, not the count",
       "198 submissions/s sustained on a single small instance (p95 215 ms)",
     ],
-    screen: <SyncScreen />,
+    screen: <ReportsScreen />,
   },
   {
     kicker: "Verify",
     title: "Crowdsourced does not mean unverified",
-    body: "Nearby reports of the same building corroborate each other; field validators and UNDP analysts confirm the rest from the console. Reporters stay anonymous — a device ID, no account — yet build a trust record that ranks their future reports.",
+    body: "Every report pins to a building and versions over time — the damage timeline shows a structure deteriorating across reports. Field validators and UNDP analysts confirm from the console; reporters stay anonymous yet keep full control of their own data.",
     facts: [
-      "Three-state pipeline: pending, verified, flagged — auditable end to end",
+      "Per-building version timeline — damage tracked across reports",
       "Anonymous by design: no name, phone number or account",
-      "Public map shows verified data only; analysts see everything",
+      "Withdraw erases your report from the server — true data-subject erasure",
     ],
-    screen: <VerifyScreen />,
+    screen: <ReportDetailScreen />,
   },
 ];
 
@@ -172,7 +172,7 @@ export default function LandingPage() {
           <Reveal delay={200} className="justify-self-center lg:justify-self-end">
             <PhoneFrame>
               <div className="lp-screen lp-active">
-                <MapScreen />
+                <MapHomeScreen />
               </div>
             </PhoneFrame>
           </Reveal>

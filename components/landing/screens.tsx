@@ -1,271 +1,574 @@
-/* The five live app states the landing story walks through. Pure HTML/CSS
-   recreations of the real mobile screens (same UNDP palette, same 3-tier
-   damage language) so each beat can animate — pins drop, sync fills, the AI
-   confidence bar settles — instead of showing static screenshots. */
+/* 1:1 HTML recreations of the real mobile app screens, transcribed from the
+   Compose source (designsystem/theme/BeaconColors.kt, feature/map/MapScreen.kt,
+   feature/capture StepShell+DamageStep, feature/reports/ReportsScreen.kt,
+   feature/reportdetail/ReportDetailScreen.kt). Every dp, color, string and
+   Lucide icon below comes from that source — if the app changes, change this
+   the same way. The stage is 360×800dp (the app's logical resolution), so
+   dp values map 1:1 to px here.
 
-const TIER = { minimal: "#59ba47", partial: "#fbc412", complete: "#d12800" };
+   The only motion added on top of the real UI: pins drop in and the syncing
+   progress bar animates — both states the real app animates too. */
 
-/* Shared stylized basemap: light street grid + building blocks, CSS only. */
-function Basemap({ dim = false }: { dim?: boolean }) {
+import {
+  ArrowLeft, ArrowRight, Check, ChevronRight, CloudOff, CloudUpload, Download,
+  House, List, LocateFixed, Map as MapIcon, MapPin, Plus, Search,
+  SlidersHorizontal, TriangleAlert, User, X, Zap,
+} from "lucide-react";
+
+/* BeaconColors — light theme, resolved hex (BeaconColors.kt). */
+const C = {
+  primary: "#006EB5", primarySoft: "#D7E9F9", primaryInk: "#1F5A95", onPrimary: "#FFFFFF",
+  bg: "#FAFAFA", surface: "#FFFFFF", surface2: "#F7F7F7", surface3: "#EDEFF0",
+  ink: "#232E3D", ink2: "#55606E", ink3: "#84929D", line: "#D4D6D8",
+  ok: "#59BA47", okSoft: "#E7F6E4", warn: "#FBC412", warnSoft: "#FFF4D1",
+  complete: "#D12800", completeSoft: "#FFE3DD",
+};
+type Tier = "minimal" | "partial" | "complete";
+const TIER_COLOR: Record<Tier, string> = { minimal: C.ok, partial: C.warn, complete: C.complete };
+const TIER_SOFT: Record<Tier, string> = { minimal: C.okSoft, partial: C.warnSoft, complete: C.completeSoft };
+const TIER_LABEL: Record<Tier, string> = {
+  minimal: "Minimal / no damage", partial: "Partially damaged", complete: "Completely destroyed",
+};
+
+/* Android status bar (28dp) — time left, signal/wifi/battery right. */
+function StatusBar() {
   return (
-    <div aria-hidden className={`absolute inset-0 ${dim ? "opacity-50 grayscale" : ""}`} style={{ background: "#eef1f3" }}>
-      {/* streets */}
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage:
-            "linear-gradient(0deg, transparent 47%, #fff 47%, #fff 53%, transparent 53%)," +
-            "linear-gradient(90deg, transparent 30%, #fff 30%, #fff 35%, transparent 35%)," +
-            "linear-gradient(90deg, transparent 68%, #fff 68%, #fff 72%, transparent 72%)," +
-            "linear-gradient(32deg, transparent 76%, #fff 76%, #fff 79%, transparent 79%)",
-        }}
-      />
-      {/* blocks */}
-      {[
-        ["8%", "8%", 52, 34], ["44%", "6%", 40, 30], ["78%", "10%", 34, 26],
-        ["6%", "60%", 44, 38], ["42%", "62%", 56, 30], ["80%", "58%", 30, 40],
-        ["10%", "34%", 36, 20], ["50%", "30%", 30, 22],
-      ].map(([l, t, w, h], i) => (
-        <div
-          key={i}
-          className="absolute rounded-[3px]"
-          style={{ left: l as string, top: t as string, width: w as number, height: h as number, background: "#dde3e6" }}
-        />
-      ))}
-      {/* park */}
-      <div className="absolute rounded-[6px]" style={{ left: "62%", top: "36%", width: 60, height: 44, background: "#dcefd8" }} />
+    <div className="relative z-20 flex h-[28px] items-center justify-between px-[24px]" style={{ color: C.ink }}>
+      <span className="text-[13px] font-medium tracking-wide">11:25</span>
+      <span className="flex items-center gap-[5px]">
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor" aria-hidden>
+          <rect x="0" y="7" width="2.6" height="4" rx="0.7" />
+          <rect x="4" y="4.5" width="2.6" height="6.5" rx="0.7" />
+          <rect x="8" y="2" width="2.6" height="9" rx="0.7" />
+          <rect x="12" y="0" width="2.6" height="11" rx="0.7" opacity="0.3" />
+        </svg>
+        <svg width="15" height="11" viewBox="0 0 16 12" fill="currentColor" aria-hidden>
+          <path d="M8 9.5a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2ZM4.9 7.6a4.6 4.6 0 0 1 6.2 0l-1.3 1.4a2.8 2.8 0 0 0-3.6 0L4.9 7.6ZM2.2 4.9a8.6 8.6 0 0 1 11.6 0l-1.3 1.3a6.8 6.8 0 0 0-9 0L2.2 4.9Z" />
+        </svg>
+        <svg width="22" height="11" viewBox="0 0 22 11" aria-hidden>
+          <rect x="0.5" y="0.5" width="18" height="10" rx="2.5" fill="none" stroke="currentColor" opacity="0.5" />
+          <rect x="2" y="2" width="13" height="7" rx="1.4" fill="currentColor" />
+          <rect x="19.8" y="3.4" width="2" height="4.2" rx="1" fill="currentColor" opacity="0.5" />
+        </svg>
+      </span>
     </div>
   );
 }
 
-function Pin({ left, top, tier, delay }: { left: string; top: string; tier: keyof typeof TIER; delay: number }) {
+/* BeaconBottomBar — Map · Reports · [+] · Profile, FAB raised 16dp. */
+function BottomNav({ active }: { active: "map" | "reports" | "profile" }) {
+  const tab = (key: "map" | "reports" | "profile", label: string, Icon: typeof MapIcon) => {
+    const on = active === key;
+    return (
+      <div className="flex flex-col items-center gap-[4px] py-[4px]">
+        <span
+          className="rounded-full px-[14px] py-[4px]"
+          style={{ background: on ? C.primarySoft : "transparent" }}
+        >
+          <Icon size={20} color={on ? C.primary : C.ink3} strokeWidth={2} />
+        </span>
+        <span className="text-[12px]" style={{ color: on ? C.primary : C.ink3, fontWeight: on ? 700 : 500 }}>
+          {label}
+        </span>
+      </div>
+    );
+  };
+  return (
+    <div className="absolute inset-x-0 bottom-0 z-20">
+      <div style={{ height: 1, background: C.line }} />
+      <div className="flex items-center justify-around bg-white pb-[18px] pt-[6px]">
+        {tab("map", "Map", MapIcon)}
+        {tab("reports", "Reports", List)}
+        <div
+          className="grid h-[56px] w-[56px] -translate-y-[16px] place-items-center rounded-[18px]"
+          style={{ background: C.primary, boxShadow: "0 10px 22px rgba(0,110,181,0.35)" }}
+        >
+          <Plus size={26} color="#fff" strokeWidth={2.4} />
+        </div>
+        {tab("profile", "Profile", User)}
+      </div>
+    </div>
+  );
+}
+
+/* OpenFreeMap Liberty-look basemap of Antakya: warm land, the Asi river,
+   white roads with warm casings, building blocks, park blobs. */
+function Basemap({ height = 800 }: { height?: number }) {
+  return (
+    <svg
+      viewBox={`0 0 360 ${height}`} width="360" height={height} aria-hidden
+      className="absolute left-0 top-0" preserveAspectRatio="xMidYMid slice"
+    >
+      <rect width="360" height={height} fill="#F4F1EA" />
+      {/* Asi river */}
+      <path d={`M -20 ${height * 0.72} C 80 ${height * 0.66}, 120 ${height * 0.78}, 200 ${height * 0.74} S 340 ${height * 0.62}, 390 ${height * 0.68} L 390 ${height} L -20 ${height} Z`} fill="#AFCFE3" opacity="0.55" />
+      <path d={`M -20 ${height * 0.75} C 80 ${height * 0.69}, 120 ${height * 0.8}, 200 ${height * 0.76} S 340 ${height * 0.65}, 390 ${height * 0.71}`} fill="none" stroke="#9FC4DC" strokeWidth="26" strokeLinecap="round" />
+      {/* parks */}
+      <ellipse cx="84" cy={height * 0.30} rx="46" ry="30" fill="#D5E8C0" />
+      <ellipse cx="296" cy={height * 0.52} rx="38" ry="26" fill="#D5E8C0" />
+      <ellipse cx="210" cy={height * 0.18} rx="30" ry="20" fill="#DFEDCE" />
+      {/* road casings then fills */}
+      {[
+        `M -10 ${height * 0.42} C 90 ${height * 0.40}, 200 ${height * 0.46}, 370 ${height * 0.40}`,
+        `M 150 -10 C 160 ${height * 0.25}, 140 ${height * 0.55}, 180 ${height + 10}`,
+        `M 260 -10 C 250 ${height * 0.3}, 290 ${height * 0.6}, 270 ${height + 10}`,
+      ].map((d, i) => <path key={`c${i}`} d={d} fill="none" stroke="#E6E0D4" strokeWidth="11" />)}
+      {[
+        `M -10 ${height * 0.42} C 90 ${height * 0.40}, 200 ${height * 0.46}, 370 ${height * 0.40}`,
+        `M 150 -10 C 160 ${height * 0.25}, 140 ${height * 0.55}, 180 ${height + 10}`,
+        `M 260 -10 C 250 ${height * 0.3}, 290 ${height * 0.6}, 270 ${height + 10}`,
+      ].map((d, i) => <path key={`f${i}`} d={d} fill="none" stroke="#FFFFFF" strokeWidth="7" />)}
+      {[
+        `M -10 ${height * 0.26} L 370 ${height * 0.22}`,
+        `M -10 ${height * 0.58} C 120 ${height * 0.55}, 240 ${height * 0.62}, 370 ${height * 0.56}`,
+        `M 60 -10 L 80 ${height + 10}`,
+        `M 320 -10 L 330 ${height * 0.5}`,
+      ].map((d, i) => <path key={`m${i}`} d={d} fill="none" stroke="#FFFFFF" strokeWidth="4" />)}
+      {/* buildings */}
+      {[
+        [22, 0.31, 16, 12], [44, 0.34, 13, 10], [108, 0.45, 18, 13], [132, 0.48, 12, 10],
+        [196, 0.30, 16, 12], [222, 0.33, 12, 9], [292, 0.27, 18, 12], [310, 0.44, 13, 10],
+        [60, 0.50, 15, 11], [240, 0.50, 16, 11], [180, 0.62, 14, 10], [96, 0.62, 16, 11],
+      ].map(([x, fy, w, h], i) => (
+        <rect key={`b${i}`} x={x as number} y={height * (fy as number)} width={w as number} height={h as number} rx="1.5" fill="#E7E2D7" transform={`rotate(${(i % 3) * 4 - 4} ${(x as number) + (w as number) / 2} ${height * (fy as number) + (h as number) / 2})`} />
+      ))}
+      <text x="186" y={height * 0.37} fontSize="13" fontWeight="500" fill="#8A909B" letterSpacing="0.4">Antakya</text>
+      <text x="40" y={height * 0.81} fontSize="11" fontStyle="italic" fill="#7BA6C2">Asi</text>
+    </svg>
+  );
+}
+
+/* Map pin (7dp radius, 2.5dp white stroke) — drops in like the live map. */
+function Pin({ left, top, tier, delay = 0 }: { left: number; top: number; tier: Tier; delay?: number }) {
   return (
     <span
-      className="lp-drop absolute z-10 block h-3.5 w-3.5 rounded-full border-2 border-white"
-      style={{ left, top, background: TIER[tier], animationDelay: `${delay}ms`, boxShadow: "0 1px 4px rgba(35,46,61,.3)" }}
+      className="lp-drop absolute z-10 rounded-full"
+      style={{
+        left, top, width: 14, height: 14, background: TIER_COLOR[tier],
+        border: "2.5px solid #fff", boxShadow: "0 1px 3px rgba(35,46,61,.35)", animationDelay: `${delay}ms`,
+      }}
     />
   );
 }
 
-function AppBar({ title, live }: { title: string; live?: boolean }) {
+/* DamageChip — soft tier container, 8dp dot, ink text (BeaconChip Sm/Md). */
+function DamageChip({ tier, md = false }: { tier: Tier; md?: boolean }) {
   return (
-    <div className="relative z-20 flex items-center gap-2 border-b border-line bg-white px-4 py-2.5">
-      <span className="grid h-6 w-6 place-items-center rounded-lg bg-primary text-white">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden>
-          <circle cx="12" cy="12" r="2" /><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5" />
-        </svg>
+    <span
+      className="inline-flex w-fit items-center rounded-full"
+      style={{
+        background: TIER_SOFT[tier], gap: 6,
+        padding: md ? "6px 12px" : "4px 8px",
+      }}
+    >
+      <span className="rounded-full" style={{ width: 8, height: 8, background: TIER_COLOR[tier] }} />
+      <span style={{ fontSize: md ? 12 : 11, fontWeight: 600, color: C.ink }}>{TIER_LABEL[tier]}</span>
+    </span>
+  );
+}
+
+/* ─────────────────────────── 1 · Map home ─────────────────────────── */
+export function MapHomeScreen() {
+  return (
+    <div className="absolute inset-0 overflow-hidden" style={{ background: "#F4F1EA" }}>
+      <Basemap />
+      {/* pins + cluster (live data look: 11 / 6 / 5) */}
+      <Pin left={92} top={332} tier="complete" delay={150} />
+      <Pin left={150} top={300} tier="partial" delay={350} />
+      <Pin left={208} top={355} tier="minimal" delay={550} />
+      <Pin left={252} top={300} tier="complete" delay={750} />
+      <Pin left={120} top={420} tier="minimal" delay={950} />
+      <Pin left={236} top={440} tier="partial" delay={1150} />
+      <Pin left={70} top={470} tier="minimal" delay={1350} />
+      <span
+        className="lp-drop absolute z-10 grid place-items-center rounded-full text-[13px] font-medium text-white"
+        style={{ left: 168, top: 470, width: 40, height: 40, background: C.primary, border: "2px solid #fff", animationDelay: "1500ms" }}
+      >
+        12
       </span>
-      <span className="text-[13px] font-bold text-ink">{title}</span>
-      {live && (
-        <span className="ml-auto flex items-center gap-1.5 rounded-full bg-complete-soft px-2 py-0.5">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="lp-ping absolute h-full w-full rounded-full bg-complete" />
-            <span className="relative h-1.5 w-1.5 rounded-full bg-complete" />
+
+      <StatusBar />
+      {/* top overlays: search + filter, crisis banner (14dp pad, 10dp gap) */}
+      <div className="absolute inset-x-0 top-[28px] z-10 flex flex-col gap-[10px] p-[14px]">
+        <div className="flex gap-[8px]">
+          <div
+            className="flex h-[48px] flex-1 items-center gap-[10px] rounded-[16px] px-[14px]"
+            style={{ background: "rgba(255,255,255,0.96)", border: `1px solid ${C.line}` }}
+          >
+            <Search size={18} color={C.ink3} />
+            <span className="text-[14px]" style={{ color: C.ink3 }}>Search area or address</span>
+          </div>
+          <div
+            className="grid h-[48px] w-[48px] place-items-center rounded-[16px]"
+            style={{ background: "rgba(255,255,255,0.96)", border: `1px solid ${C.line}` }}
+          >
+            <SlidersHorizontal size={20} color={C.ink2} />
+          </div>
+        </div>
+        <div
+          className="flex items-center gap-[10px] rounded-[14px] p-[10px]"
+          style={{ background: C.completeSoft, border: "1px solid rgba(209,40,0,0.4)" }}
+        >
+          <span className="grid h-[32px] w-[32px] shrink-0 place-items-center rounded-[10px]" style={{ background: C.complete }}>
+            <TriangleAlert size={18} color="#fff" />
           </span>
-          <span className="text-[9px] font-bold uppercase tracking-wide text-complete">Live</span>
-        </span>
-      )}
-    </div>
-  );
-}
-
-/* 1 — Hero / live map with dropping pins. */
-export function MapScreen() {
-  return (
-    <div className="absolute inset-0 flex flex-col">
-      <AppBar title="Beacon" live />
-      <div className="relative flex-1 overflow-hidden">
-        <Basemap />
-        <Pin left="22%" top="24%" tier="complete" delay={200} />
-        <Pin left="38%" top="48%" tier="partial" delay={500} />
-        <Pin left="61%" top="30%" tier="minimal" delay={800} />
-        <Pin left="70%" top="62%" tier="partial" delay={1100} />
-        <Pin left="30%" top="70%" tier="complete" delay={1400} />
-        <Pin left="52%" top="16%" tier="minimal" delay={1700} />
-        {/* cluster bubble */}
-        <span className="lp-drop absolute left-[46%] top-[58%] z-10 grid h-7 w-7 place-items-center rounded-full bg-primary text-[10px] font-bold text-white ring-2 ring-white" style={{ animationDelay: "1900ms" }}>
-          12
-        </span>
-        {/* crisis banner */}
-        <div className="absolute inset-x-3 top-3 z-10 rounded-lg border border-line bg-white/95 px-3 py-2 shadow-sm">
-          <div className="text-[11px] font-bold text-ink">Türkiye Earthquake — Antakya</div>
-          <div className="font-mono text-[9px] text-ink2">EQ-2026-000012-TUR · started 14 h ago</div>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] font-semibold" style={{ color: C.complete }}>
+              Active crisis · Earthquake M 6.4
+            </span>
+            <span className="block truncate text-[12px] font-medium" style={{ color: C.ink2 }}>
+              Antakya district, Hatay · 4 d ago · UNDP RAPIDA
+            </span>
+          </span>
+          <span className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-full">
+            <X size={16} color={C.ink3} />
+          </span>
         </div>
       </div>
-      <div className="relative z-10 border-t border-line bg-white px-4 py-3">
-        <div className="rounded-lg bg-primary py-2.5 text-center text-[13px] font-bold text-white">Report damage</div>
-      </div>
-    </div>
-  );
-}
 
-/* 2 — Capture: photo + on-device AI suggestion + 3-tier choice. */
-export function CaptureScreen() {
-  return (
-    <div className="absolute inset-0 flex flex-col bg-white">
-      <AppBar title="New report · 1 of 3" />
-      <div className="relative h-[212px] overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/landing/damage-street.jpg" alt="" className="h-full w-full object-cover" />
-        <span className="absolute left-3 top-3 rounded-md bg-ink/70 px-2 py-0.5 font-mono text-[9px] text-white">EXIF stripped · faces blurred</span>
-      </div>
-      <div className="flex-1 space-y-3 px-4 py-3">
-        <div className="rounded-lg border border-primary/30 bg-primary-soft/60 p-2.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-primary-ink">On-device AI suggests: Partial damage</span>
-            <span className="font-mono text-[10px] font-bold text-primary-ink">86%</span>
-          </div>
-          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white">
-            <div className="lp-settle h-full rounded-full bg-primary" />
-          </div>
-          <div className="mt-1 text-[9px] text-ink2">Runs offline — no network needed</div>
+      {/* bottom overlays: recenter + damage stats (12dp pad, 8dp gap) */}
+      <div className="absolute inset-x-0 bottom-[88px] z-10 flex flex-col items-end gap-[8px] p-[12px]">
+        <div
+          className="grid h-[44px] w-[44px] place-items-center rounded-[14px]"
+          style={{ background: C.surface, boxShadow: "0 4px 14px rgba(46,40,24,0.18)" }}
+        >
+          <LocateFixed size={20} color={C.ink2} />
         </div>
-        <div className="space-y-1.5">
-          {(
-            [
-              ["Minimal", "minimal", false],
-              ["Partial", "partial", true],
-              ["Complete", "complete", false],
-            ] as const
-          ).map(([label, tier, on]) => (
-            <div
-              key={tier}
-              className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 ${on ? "border-primary bg-primary-soft/50" : "border-line"}`}
-            >
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: TIER[tier] }} />
-              <span className="text-[12px] font-semibold text-ink">{label} damage</span>
-              {on && (
-                <svg className="ml-auto text-primary" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
-                  <path d="M5 13l4 4 10-11" />
-                </svg>
-              )}
-            </div>
+        <div
+          className="flex w-full rounded-[18px] p-[10px]"
+          style={{ background: C.surface, border: `1px solid ${C.line}`, boxShadow: "0 4px 14px rgba(46,40,24,0.12)", gap: 6 }}
+        >
+          {([["minimal", 11], ["partial", 6], ["complete", 5]] as [Tier, number][]).map(([tier, n]) => (
+            <span key={tier} className="flex min-w-0 flex-1 flex-col items-center px-[1px] py-[4px]">
+              <span className="flex items-center gap-[4px]">
+                <span className="rounded-full" style={{ width: 8, height: 8, background: TIER_COLOR[tier] }} />
+                <span className="text-[22px] font-bold leading-none" style={{ color: C.ink, letterSpacing: "-0.01em" }}>{n}</span>
+              </span>
+              <span className="mt-[3px] w-full truncate text-center text-[10px] font-medium" style={{ color: C.ink3 }}>
+                {TIER_LABEL[tier]}
+              </span>
+            </span>
           ))}
         </div>
       </div>
-      <div className="border-t border-line px-4 py-3">
-        <div className="rounded-lg bg-primary py-2.5 text-center text-[13px] font-bold text-white">Continue</div>
-      </div>
+      <BottomNav active="map" />
     </div>
   );
 }
 
-/* 3 — Offline: banner, dimmed map from cache, durable queue. */
-export function OfflineScreen() {
+/* ──────────────────── 2 · Capture — Damage step ──────────────────── */
+function OptionRow({
+  tier, title, desc, selected = false,
+}: { tier: Tier; title: string; desc: string; selected?: boolean }) {
+  const accent = TIER_COLOR[tier];
   return (
-    <div className="absolute inset-0 flex flex-col">
-      <AppBar title="Beacon" />
-      <div className="bg-ink px-4 py-1.5 text-center text-[10px] font-semibold text-white">
-        No connection — map served from the 18 MB offline pack
-      </div>
-      <div className="relative h-[200px] overflow-hidden">
-        <Basemap dim />
-        <span className="absolute left-[40%] top-[42%] z-10 block h-3.5 w-3.5 rounded-full border-2 border-white bg-primary" style={{ boxShadow: "0 1px 4px rgba(35,46,61,.3)" }} />
-        <span className="absolute bottom-2 right-2 rounded-md bg-white/90 px-2 py-0.5 font-mono text-[9px] text-ink2">Plus Code 8G4P+Q2</span>
-      </div>
-      <div className="flex-1 space-y-2 bg-white px-4 py-3">
-        <div className="text-[10px] font-bold uppercase tracking-wide text-ink3">Outbox — saved on this device</div>
-        {[
-          ["Partial damage · Kurtuluş Cd.", "2 photos"],
-          ["Complete damage · Atatürk Blv.", "1 photo"],
-          ["Minimal damage · Gazi Mah.", "1 photo"],
-        ].map(([title, sub], i) => (
-          <div key={i} className="flex items-center gap-2.5 rounded-lg border border-line px-3 py-2">
-            <span className="lp-blink h-2 w-2 rounded-full bg-ink3" style={{ animationDelay: `${i * 300}ms` }} />
-            <div className="min-w-0">
-              <div className="truncate text-[11px] font-semibold text-ink">{title}</div>
-              <div className="text-[9px] text-ink2">{sub} · queued, survives restart</div>
-            </div>
-            <span className="ml-auto rounded-full bg-surface2 px-2 py-0.5 text-[9px] font-bold text-ink2">Queued</span>
-          </div>
-        ))}
-      </div>
+    <div
+      className="flex items-center rounded-[18px] p-[16px]"
+      style={{
+        gap: 14,
+        background: selected ? TIER_SOFT[tier] : C.surface,
+        border: selected ? `2px solid ${accent}` : `1px solid ${C.line}`,
+      }}
+    >
+      <span
+        className="grid h-[44px] w-[44px] shrink-0 place-items-center rounded-[14px]"
+        style={{ background: selected ? "rgba(255,255,255,0.7)" : C.surface2 }}
+      >
+        <House size={22} color={accent} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[16px] font-bold leading-snug" style={{ color: C.ink }}>{title}</span>
+        <span className="block text-[14px] leading-[20px]" style={{ color: C.ink2 }}>{desc}</span>
+      </span>
+      <span
+        className="grid h-[24px] w-[24px] shrink-0 place-items-center rounded-full"
+        style={{ border: `2px solid ${selected ? accent : C.line}` }}
+      >
+        {selected && <span className="rounded-full" style={{ width: 12, height: 12, background: accent }} />}
+      </span>
     </div>
   );
 }
 
-/* 4 — Reconnect: outbox flushes, server dedup merges a duplicate. */
-export function SyncScreen() {
+export function CaptureDamageScreen() {
   return (
-    <div className="absolute inset-0 flex flex-col bg-white">
-      <AppBar title="Beacon" live />
-      <div className="bg-primary px-4 py-1.5 text-center text-[10px] font-semibold text-white">Back online — syncing outbox</div>
-      <div className="px-4 pt-3">
-        <div className="h-1.5 overflow-hidden rounded-full bg-surface2">
-          <div className="lp-fill h-full rounded-full bg-primary" />
+    <div className="absolute inset-0 flex flex-col" style={{ background: C.bg }}>
+      <StatusBar />
+      {/* StepShell top bar: back · stepper · phase label */}
+      <div className="flex items-center gap-[12px] px-[20px] pb-[8px] pt-[12px]">
+        <span className="grid h-[36px] w-[36px] shrink-0 place-items-center rounded-full" style={{ background: C.surface2 }}>
+          <ArrowLeft size={18} color={C.ink} />
+        </span>
+        <span className="flex flex-1 gap-[4px]">
+          <span className="h-[4px] flex-1 rounded-full" style={{ background: C.primary }} />
+          <span className="h-[4px] flex-1 rounded-full" style={{ background: C.surface3 }} />
+          <span className="h-[4px] flex-1 rounded-full" style={{ background: C.surface3 }} />
+        </span>
+        <span className="text-[12px] font-medium" style={{ color: C.ink3 }}>Damage · 1/4</span>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col gap-[10px] overflow-hidden px-[20px] py-[8px]">
+        <div>
+          <h3 className="text-[26px] font-bold leading-[30px]" style={{ color: C.ink, letterSpacing: "-0.02em" }}>
+            What is the extent of damage?
+          </h3>
+          <p className="mt-[4px] text-[14px] leading-[20px]" style={{ color: C.ink2 }}>
+            Pick the option that best describes this structure.
+          </p>
         </div>
-      </div>
-      <div className="flex-1 space-y-2 px-4 py-3">
-        {[
-          ["Partial damage · Kurtuluş Cd.", "Synced", true],
-          ["Complete damage · Atatürk Blv.", "Synced", true],
-          ["Minimal damage · Gazi Mah.", "Duplicate — merged", false],
-        ].map(([title, status, ok], i) => (
-          <div key={i} className="flex items-center gap-2.5 rounded-lg border border-line px-3 py-2">
-            {ok ? (
-              <span className="grid h-4 w-4 place-items-center rounded-full" style={{ background: TIER.minimal }}>
-                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" aria-hidden>
-                  <path d="M5 13l4 4 10-11" />
-                </svg>
-              </span>
-            ) : (
-              <span className="grid h-4 w-4 place-items-center rounded-full bg-primary text-[9px] font-bold text-white">2</span>
-            )}
-            <div className="min-w-0 truncate text-[11px] font-semibold text-ink">{title as string}</div>
-            <span className={`ml-auto whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold ${ok ? "bg-ok-soft text-ink" : "bg-primary-soft text-primary-ink"}`}>
-              {status as string}
+        <div className="h-[6px]" />
+        {/* on-device AI advisory (shows when the classifier is confident) */}
+        <div
+          className="flex items-center rounded-[14px] p-[12px]"
+          style={{ gap: 10, background: C.primarySoft, border: "1px solid rgba(0,110,181,0.35)" }}
+        >
+          <Zap size={18} color={C.primary} className="shrink-0" />
+          <span className="min-w-0">
+            <span className="block text-[16px] font-bold leading-snug" style={{ color: C.ink }}>
+              On-device AI suggests: Partially damaged · 86%
             </span>
-          </div>
-        ))}
-        <div className="rounded-lg border border-line bg-surface2/60 p-2.5 text-[10px] leading-relaxed text-ink2">
-          Idempotent submits — retries can never double-count. A second report of the same building merges into one record, version 2.
+            <span className="block text-[12px] font-medium" style={{ color: C.ink3 }}>
+              Advisory only — confirm or choose another.
+            </span>
+          </span>
+        </div>
+        <OptionRow tier="minimal" title="Minimal / no damage" desc="Little or no visible damage" />
+        <OptionRow tier="partial" title="Partially damaged" desc="Visible structural damage; still standing" selected />
+        <OptionRow tier="complete" title="Completely destroyed" desc="Collapsed or beyond repair" />
+      </div>
+
+      <div className="px-[20px] pb-[34px] pt-[14px]" style={{ background: C.bg }}>
+        <div
+          className="flex h-[56px] w-full items-center justify-center rounded-[20px]"
+          style={{ gap: 8, background: C.primary }}
+        >
+          <span className="text-[16px] font-semibold text-white">Continue</span>
+          <ArrowRight size={19} color="#fff" />
+        </div>
+        <div className="mt-[10px] text-center text-[12px] font-medium" style={{ color: C.ink3 }}>
+          You can change this later.
         </div>
       </div>
     </div>
   );
 }
 
-/* 5 — Verification: community confirms, analyst verifies, trust grows. */
-export function VerifyScreen() {
+/* ──────────────── 3+4 · My reports (offline / syncing) ──────────────── */
+type RowState = "queued" | "syncing" | "synced" | "rejected";
+function StatusChip({ state }: { state: RowState }) {
+  const cfg = {
+    synced: { label: "Synced", Icon: Check, bg: C.okSoft, fg: C.ok },
+    rejected: { label: "Rejected", Icon: TriangleAlert, bg: C.warnSoft, fg: C.ink },
+    queued: { label: "Queued", Icon: CloudOff, bg: C.surface3, fg: C.ink2 },
+    syncing: { label: "Queued", Icon: CloudOff, bg: C.surface3, fg: C.ink2 },
+  }[state];
   return (
-    <div className="absolute inset-0 flex flex-col bg-white">
-      <AppBar title="Your report" />
-      <div className="relative h-[150px] overflow-hidden">
+    <span className="inline-flex shrink-0 items-center rounded-full px-[8px] py-[4px]" style={{ gap: 6, background: cfg.bg }}>
+      <cfg.Icon size={11} color={cfg.fg} />
+      <span className="text-[11px] font-semibold" style={{ color: cfg.fg }}>{cfg.label}</span>
+    </span>
+  );
+}
+
+function ReportRow({
+  id, time, tier, state, photo, note, animateProgress = false,
+}: { id: string; time: string; tier: Tier; state: RowState; photo: string; note?: string; animateProgress?: boolean }) {
+  return (
+    <div
+      className="flex items-center rounded-[18px] p-[12px]"
+      style={{ gap: 12, background: C.surface, border: `1px solid ${C.line}` }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={photo} alt="" className="h-[56px] w-[56px] shrink-0 rounded-[14px] object-cover" />
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center" style={{ gap: 8 }}>
+          <span className="min-w-0 truncate text-[16px] font-bold" style={{ color: C.ink }}>#{id}</span>
+          <StatusChip state={state} />
+        </span>
+        <span className="mt-[2px] block truncate text-[12px] font-medium" style={{ color: C.ink3 }}>{time}</span>
+        {note && <span className="mt-[2px] block text-[12px] font-medium" style={{ color: C.ink2 }}>{note}</span>}
+        <span className="mt-[6px] block">
+          <DamageChip tier={tier} />
+        </span>
+        {state === "syncing" && (
+          <span className="mt-[6px] block h-[3px] overflow-hidden rounded-full" style={{ background: C.surface3 }}>
+            <span className={`block h-full rounded-full ${animateProgress ? "lp-fill" : ""}`} style={{ background: TIER_COLOR[tier], width: "55%" }} />
+          </span>
+        )}
+      </span>
+      <ChevronRight size={16} color={C.ink3} className="shrink-0" />
+    </div>
+  );
+}
+
+export function ReportsScreen({ offline = false }: { offline?: boolean }) {
+  const rows = offline
+    ? ([
+        { id: "b781ccbf", time: "Just now · 8G8V65Q2+7G", tier: "partial", state: "queued", photo: "/landing/damage-street.jpg" },
+        { id: "7900a404", time: "9 min ago · 8G8V65P3+X4", tier: "complete", state: "queued", photo: "/landing/damage-houses.jpg" },
+        { id: "6f2d7988", time: "14 min ago · 8G8V64RW+88", tier: "minimal", state: "queued", photo: "/landing/street-antakya.jpg" },
+      ] as const)
+    : ([
+        { id: "b781ccbf", time: "2 min ago · 8G8V65Q2+7G", tier: "partial", state: "synced", photo: "/landing/damage-street.jpg" },
+        { id: "7900a404", time: "11 min ago · 8G8V65P3+X4", tier: "complete", state: "syncing", photo: "/landing/damage-houses.jpg" },
+        { id: "6f2d7988", time: "16 min ago · 8G8V64RW+88", tier: "minimal", state: "rejected", photo: "/landing/street-antakya.jpg", note: "Duplicate of a nearby report" },
+      ] as const);
+  return (
+    <div className="absolute inset-0 flex flex-col" style={{ background: C.bg }}>
+      <StatusBar />
+      <div className="px-[20px] pt-[14px]">
+        <div className="flex items-center justify-between">
+          <span className="text-[26px] font-bold" style={{ color: C.ink, letterSpacing: "-0.02em" }}>Reports</span>
+          <span className="grid h-[40px] w-[40px] place-items-center rounded-full" style={{ background: C.surface }}>
+            <Download size={18} color={C.ink2} />
+          </span>
+        </div>
+        <div className="pt-[4px] text-[12px] font-medium" style={{ color: C.ink3 }}>
+          {offline ? "3 reports · 0 synced" : "3 reports · 1 synced"}
+        </div>
+        {/* SyncHeader — passive connectivity + outbox banner */}
+        <div
+          className="mt-[12px] flex items-center rounded-[14px] px-[12px] py-[10px]"
+          style={{ gap: 8, background: offline ? C.surface2 : C.primarySoft }}
+        >
+          {offline
+            ? <CloudOff size={18} color={C.ink2} />
+            : <CloudUpload size={18} color={C.primary} />}
+          <span className="text-[13px] font-semibold" style={{ color: C.ink }}>
+            {offline ? "Offline · 3 queued" : "Online · 2 queued · syncing…"}
+          </span>
+        </div>
+        {/* filter chips */}
+        <div className="flex overflow-hidden py-[14px]" style={{ gap: 8 }}>
+          {[["All · 3", true], ["Minimal / no damage · 1", false], ["Partially damaged · 1", false]].map(([label, on]) => (
+            <span
+              key={label as string}
+              className="shrink-0 whitespace-nowrap rounded-full px-[14px] py-[7px] text-[13px] font-semibold"
+              style={on
+                ? { background: C.primary, color: C.onPrimary }
+                : { background: C.surface, color: C.ink2, border: `1px solid ${C.line}` }}
+            >
+              {label as string}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-[20px] pb-[20px]" style={{ gap: 10 }}>
+        {rows.map((r) => (
+          <ReportRow key={r.id} {...r} animateProgress={!offline} />
+        ))}
+      </div>
+      <BottomNav active="reports" />
+    </div>
+  );
+}
+
+/* ───────────────────── 5 · Report detail ───────────────────── */
+function MetaCell({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="flex-1 rounded-[12px] p-[10px]" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+      <span className="block text-[11px] font-bold uppercase" style={{ color: C.ink3, letterSpacing: "0.1em" }}>{label}</span>
+      <span className="mt-[2px] block text-[14px] font-medium" style={{ color: C.ink }}>{value}</span>
+    </span>
+  );
+}
+
+export function ReportDetailScreen() {
+  return (
+    <div className="absolute inset-0 flex flex-col overflow-hidden" style={{ background: C.bg }}>
+      {/* photo header (real: 260dp; trimmed so the whole card stack fits the fold) */}
+      <div className="relative h-[196px] shrink-0">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/landing/damage-houses.jpg" alt="" className="h-full w-full object-cover" />
-        <span className="absolute left-3 top-3 flex items-center gap-1 rounded-md px-2 py-0.5 text-[9px] font-bold text-white" style={{ background: TIER.partial }}>
-          <span className="h-1.5 w-1.5 rounded-full bg-white" /> PARTIAL
+        <div className="absolute inset-x-0 top-0"><StatusBar /></div>
+        <span
+          className="absolute left-[14px] top-[42px] grid h-[40px] w-[40px] place-items-center rounded-full"
+          style={{ background: "rgba(255,255,255,0.95)" }}
+        >
+          <ArrowLeft size={18} color={C.ink} />
+        </span>
+        <span
+          className="absolute bottom-[14px] left-[14px] flex items-center rounded-full px-[10px] py-[5px]"
+          style={{ gap: 6, background: "rgba(0,0,0,0.6)" }}
+        >
+          <Check size={12} color="#fff" />
+          <span className="text-[12px] font-medium text-white">Anonymised · EXIF stripped</span>
         </span>
       </div>
-      <div className="flex-1 space-y-0 px-4 py-3">
-        {[
-          ["Submitted", "09:41 — pinned to building fp-4af19c02", true, "0ms"],
-          ["Confirmed by 2 nearby reporters", "agreement raises confidence", true, "400ms"],
-          ["Verified by UNDP analyst", "visible on the public map", true, "800ms"],
-        ].map(([title, sub, , delay], i) => (
-          <div key={i} className="lp-drop relative flex gap-3 pb-4" style={{ animationDelay: delay as string }}>
-            {i < 2 && <span className="absolute left-[7px] top-5 h-full w-px bg-line" />}
-            <span className="relative z-10 mt-0.5 grid h-[15px] w-[15px] place-items-center rounded-full" style={{ background: TIER.minimal }}>
-              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="4" aria-hidden>
-                <path d="M5 13l4 4 10-11" />
-              </svg>
-            </span>
-            <div>
-              <div className="text-[11.5px] font-bold text-ink">{title}</div>
-              <div className="text-[9.5px] text-ink2">{sub}</div>
-            </div>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-[20px] pb-0" style={{ gap: 12 }}>
+        <div className="flex items-start justify-between" style={{ gap: 8 }}>
+          <span className="min-w-0">
+            <span className="block text-[11px] font-bold uppercase" style={{ color: C.ink3, letterSpacing: "0.1em" }}>Report</span>
+            <span className="block truncate text-[22px] font-bold" style={{ color: C.ink, letterSpacing: "-0.01em" }}>#b781ccbf</span>
+          </span>
+          <DamageChip tier="partial" md />
+        </div>
+
+        {/* location: mini map + plus code */}
+        <div>
+          <div className="relative h-[96px] overflow-hidden rounded-[16px]" style={{ border: `1px solid ${C.line}` }}>
+            <Basemap height={220} />
+            <span
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+              style={{ width: 14, height: 14, background: C.warn, border: "2.5px solid #fff", boxShadow: "0 1px 3px rgba(35,46,61,.35)" }}
+            />
           </div>
-        ))}
-        <div className="rounded-lg border border-primary/30 bg-primary-soft/50 p-2.5">
-          <div className="flex items-center justify-between text-[10px] font-bold text-primary-ink">
-            <span>Reporter trust</span>
-            <span className="font-mono">+12 pts</span>
-          </div>
-          <div className="mt-1 text-[9px] leading-relaxed text-ink2">
-            Anonymous device ID only — no account, no phone number. Verified history makes future reports rank higher.
+          <div className="mt-[8px] flex items-center" style={{ gap: 6 }}>
+            <MapPin size={14} color={C.primary} />
+            <span className="font-mono text-[14px] font-medium" style={{ color: C.ink2 }}>8G8V65Q2+7G</span>
+            <span className="text-[12px] font-medium" style={{ color: C.ink3 }}>· ±12 m</span>
           </div>
         </div>
+
+        <div className="flex" style={{ gap: 8 }}>
+          <MetaCell label="Type" value="Residential" />
+          <MetaCell label="Crisis" value="Earthquake" />
+        </div>
+
+        {/* damage timeline — this building, versioned */}
+        <div>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase" style={{ color: C.ink3, letterSpacing: "0.1em" }}>Damage timeline</span>
+            <span className="text-[12px] font-medium" style={{ color: C.ink3 }}>this building</span>
+          </div>
+          <div className="mt-[8px] rounded-[16px] p-[14px]" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
+            <div className="flex" style={{ gap: 12 }}>
+              <span className="flex flex-col items-center">
+                <span className="mt-[4px] rounded-full" style={{ width: 14, height: 14, background: C.warn }} />
+                <span style={{ width: 1, height: 26, background: C.line }} />
+              </span>
+              <span className="min-w-0 flex-1 pb-[6px]">
+                <span className="flex items-center justify-between">
+                  <span className="text-[13px] font-semibold" style={{ color: C.warn }}>Partially damaged</span>
+                  <span className="text-[12px] font-medium" style={{ color: C.ink3 }}>2 min ago</span>
+                </span>
+                <span className="block text-[12px] font-medium" style={{ color: C.ink2 }}>v2 · your report</span>
+              </span>
+            </div>
+            <div className="flex" style={{ gap: 12 }}>
+              <span className="mt-[4px] ml-[2px] rounded-full" style={{ width: 10, height: 10, background: C.ok }} />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center justify-between">
+                  <span className="text-[13px] font-semibold" style={{ color: C.ok }}>Minimal / no damage</span>
+                  <span className="text-[12px] font-medium" style={{ color: C.ink3 }}>2 d ago</span>
+                </span>
+                <span className="block text-[12px] font-medium" style={{ color: C.ink2 }}>v1 · community report</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* withdraw — reporter-initiated erasure */}
+        <div
+          className="flex items-center rounded-[14px] px-[14px] py-[12px]"
+          style={{ gap: 10, border: "1px solid rgba(209,40,0,0.4)" }}
+        >
+          <TriangleAlert size={18} color={C.complete} />
+          <span className="text-[13px] font-semibold" style={{ color: C.complete }}>Withdraw report</span>
+        </div>
       </div>
+      <BottomNav active="reports" />
     </div>
   );
 }
