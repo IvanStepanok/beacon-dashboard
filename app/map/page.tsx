@@ -115,6 +115,8 @@ export default function MapPage() {
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-line bg-surface px-8 py-3">
         {selectedCrisis && (
           <select
+            name="crisis"
+            aria-label="Crisis scope"
             value={selectedCrisis}
             onChange={(e) => { setSelectedCrisis(e.target.value); clearSelection(); }}
             className="rounded-xl border border-line bg-surface px-3 py-1.5 text-[13px] text-ink outline-none focus:border-primary"

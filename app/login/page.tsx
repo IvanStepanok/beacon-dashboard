@@ -49,16 +49,22 @@ export default function LoginPage() {
           <h1 className="text-[18px] font-bold text-ink">Sign in</h1>
           <p className="mt-0.5 text-[13px] text-ink3">UNDP analyst access</p>
 
-          <label className="mt-5 block text-[12px] font-semibold uppercase tracking-wide text-ink3">Email</label>
+          <label htmlFor="email" className="mt-5 block text-[12px] font-semibold uppercase tracking-wide text-ink3">Email</label>
           <input
+            id="email"
+            name="email"
             type="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="mt-1 w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-[14px] text-ink outline-none focus:border-primary"
           />
-          <label className="mt-4 block text-[12px] font-semibold uppercase tracking-wide text-ink3">Password</label>
+          <label htmlFor="password" className="mt-4 block text-[12px] font-semibold uppercase tracking-wide text-ink3">Password</label>
           <input
+            id="password"
+            name="password"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="mt-1 w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-[14px] text-ink outline-none focus:border-primary"

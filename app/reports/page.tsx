@@ -90,6 +90,8 @@ export default function ReportsPage() {
       <div className="space-y-4 px-8 py-6">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           <select
+            name="crisis"
+            aria-label="Crisis scope"
             value={selectedCrisis}
             onChange={(e) => setSelectedCrisis(e.target.value)}
             className="rounded-xl border border-line bg-surface px-3 py-2 text-[14px] text-ink outline-none focus:border-primary"
@@ -107,6 +109,9 @@ export default function ReportsPage() {
           <div className="relative">
             <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink3" />
             <input
+              name="q"
+              type="search"
+              aria-label="Search reports"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search place, ID, type…"
