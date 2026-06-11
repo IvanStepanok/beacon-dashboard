@@ -1,25 +1,38 @@
 @import "tailwindcss";
 
-/* Beacon design tokens (mirror the mobile app) — trauma-informed damage palette. */
+/* Design tokens aligned to the UNDP Design System (design.undp.org).
+   Primitives lifted from undp/design-system: brand blue #006EB5, the neutral
+   gray ramp (#FAFAFA→#232E3D), and the semantic green/yellow/red. The damage
+   tiers map onto UNDP semantics — minimal=green, partial=yellow, complete=red. */
 @theme {
-  --color-primary: #6e4fc4;
-  --color-primary-soft: #e6dcf6;
-  --color-primary-ink: #3a2470;
-  --color-bg: #faf8fd;
+  /* Brand — UNDP blue (blue-600), hover/active = blue-700, soft = blue-100 */
+  --color-primary: #006eb5;
+  --color-primary-soft: #d7e9f9;
+  --color-primary-ink: #1f5a95;
+  /* Neutrals — UNDP gray ramp */
+  --color-bg: #fafafa;
   --color-surface: #ffffff;
-  --color-surface2: #f2eef8;
-  --color-ink: #2c2733;
-  --color-ink2: #5c5567;
-  --color-ink3: #8b8497;
-  --color-line: #e4dfea;
-  --color-ok: #3fa463;
-  --color-ok-soft: #dcf1e3;
-  --color-warn: #d49a2a;
-  --color-warn-soft: #f6ecd6;
-  --color-complete: #b66250;
-  --color-complete-soft: #f4e6e2;
-  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-dm-mono), ui-monospace, monospace;
+  --color-surface2: #f7f7f7;
+  --color-ink: #232e3d; /* gray-700 — near-black body text */
+  --color-ink2: #55606e; /* gray-600 */
+  --color-ink3: #84929d; /* gray-530 */
+  --color-line: #edeff0; /* gray-300 */
+  /* Damage tiers → UNDP semantic palette */
+  --color-ok: #59ba47; /* green-600  — minimal */
+  --color-ok-soft: #e7f6e4;
+  --color-warn: #fbc412; /* yellow-600 — partial */
+  --color-warn-soft: #fff4d1;
+  --color-complete: #d12800; /* red-600 — complete */
+  --color-complete-soft: #ffe3dd;
+  /* Type — ProximaNova (UNDP body) → Noto Sans (UNDP non-Latin fallback, loaded) */
+  --font-sans: "ProximaNova", var(--font-undp-sans), "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "SohneBreit", "ProximaNova", var(--font-undp-sans), "Noto Sans", ui-sans-serif, sans-serif;
+  --font-mono: var(--font-undp-mono), ui-monospace, "Noto Sans Mono", monospace;
+  /* Radius — UNDP reads flat/institutional; tighten the soft consumer-app corners
+     (pills via rounded-full are untouched). */
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.375rem;
+  --radius-2xl: 0.5rem;
 }
 
 html,

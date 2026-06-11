@@ -1,16 +1,21 @@
 import type { Metadata } from "next";
-import { DM_Sans, DM_Mono } from "next/font/google";
+import { Noto_Sans, Noto_Sans_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { AppShell } from "@/components/AppShell";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+// UNDP Design System body type is ProximaNova; its own non-Latin fallback is Noto
+// Sans (free, on Google Fonts, and covers all 6 UN scripts incl. Arabic/CJK). We
+// render with Noto Sans and keep ProximaNova first in the stack for environments
+// that have the licensed face installed.
+const notoSans = Noto_Sans({
+  variable: "--font-undp-sans",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const dmMono = DM_Mono({
-  variable: "--font-dm-mono",
+const notoMono = Noto_Sans_Mono({
+  variable: "--font-undp-mono",
   weight: ["400", "500"],
   subsets: ["latin"],
 });
@@ -29,7 +34,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${dmSans.variable} ${dmMono.variable} h-full antialiased`}
+      className={`${notoSans.variable} ${notoMono.variable} h-full antialiased`}
     >
       <body className="min-h-full font-sans text-ink">
         <AuthProvider>

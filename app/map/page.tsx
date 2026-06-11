@@ -140,8 +140,10 @@ export default function MapPage() {
                 className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors"
                 style={{
                   borderColor: on ? DAMAGE_TIER_COLORS[d] : "var(--color-line)",
-                  backgroundColor: on ? `${DAMAGE_TIER_COLORS[d]}1f` : "transparent",
-                  color: on ? DAMAGE_TIER_COLORS[d] : "var(--color-ink2)",
+                  backgroundColor: on ? `${DAMAGE_TIER_COLORS[d]}24` : "transparent",
+                  // Dark text always (the dot + border carry the tier color) — UNDP
+                  // yellow-600 is illegible as text.
+                  color: on ? "var(--color-ink)" : "var(--color-ink2)",
                 }}
               >
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: DAMAGE_TIER_COLORS[d] }} />

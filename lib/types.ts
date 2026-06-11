@@ -123,10 +123,11 @@ export const DAMAGE_TIER_LABELS: Record<DamageTier, string> = {
   partial: "Partially damaged",
   complete: "Completely destroyed",
 };
+// UNDP Design System semantic palette (green-600 / yellow-600 / red-600).
 export const DAMAGE_TIER_COLORS: Record<DamageTier, string> = {
-  minimal: "#3FA463",
-  partial: "#D49A2A",
-  complete: "#B66250",
+  minimal: "#59BA47",
+  partial: "#FBC412",
+  complete: "#D12800",
 };
 export const DAMAGE_TIER_ORDER: DamageTier[] = ["minimal", "partial", "complete"];
 

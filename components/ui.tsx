@@ -37,10 +37,12 @@ export function SectionTitle({
 export function DamageBadge({ level }: { level: string }) {
   const color = (DAMAGE_TIER_COLORS as Record<string, string>)[level] ?? "#9aa";
   const label = (DAMAGE_TIER_LABELS as Record<string, string>)[level] ?? level;
+  // UNDP tag pattern: dark ink text + a colored status dot + a soft tint — so the
+  // vivid semantic color (esp. yellow-600) is only ever a fill and never illegible text.
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"
-      style={{ color, backgroundColor: `${color}1f` }}
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold text-ink"
+      style={{ backgroundColor: `${color}24` }}
     >
       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
       {label}
@@ -58,9 +60,10 @@ export function VerificationBadge({ status }: { status: Verification }) {
   const s = VERIF_STYLE[status];
   return (
     <span
-      className="inline-flex items-center rounded-full px-2.5 py-1 text-[12px] font-semibold"
-      style={{ color: s.fg, backgroundColor: s.bg }}
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold text-ink"
+      style={{ backgroundColor: s.bg }}
     >
+      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: s.fg }} />
       {VERIFICATION_LABELS[status]}
     </span>
   );

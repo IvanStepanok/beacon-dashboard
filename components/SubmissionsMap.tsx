@@ -131,10 +131,10 @@ export function SubmissionsMap({
           source: SEL,
           paint: {
             "circle-radius": 15,
-            "circle-color": "#6e4fc4",
+            "circle-color": "#006eb5",
             "circle-opacity": 0.18,
             "circle-stroke-width": 2,
-            "circle-stroke-color": "#6e4fc4",
+            "circle-stroke-color": "#006eb5",
           },
         });
 
