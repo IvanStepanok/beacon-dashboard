@@ -64,16 +64,15 @@ async function get<T>(path: string, init?: RequestInit): Promise<T> {
 
 export interface StatsOverview {
   totalReports: number;
-  damageCounts: Record<string, number>;
   verificationCounts: Record<string, number>;
   syncedCount: number;
   syncedPct: number;
   destroyedPct: number;
   severePlusPct: number;
   completePct?: number;
-  // 3-tier rollup (minimal/partial/complete) computed server-side — the canonical
-  // breakdown under the tier3 default scale (the 5-level damageCounts miss tier3 rows).
-  damageTierCounts?: Record<string, number>;
+  // Canonical 3-tier breakdown (minimal/partial/complete) computed server-side;
+  // sums to totalReports.
+  damageTierCounts: Record<string, number>;
   areas: { area: string; count: number; worst: string }[];
   // `hour` is really a bucket index in `timeSeriesUnit` steps ago (0 = now);
   // the unit flips from "hour" to "day" once the crisis is older than 48h.
@@ -150,19 +149,6 @@ export const api = {
     });
     if (res.status === 401) { on401(); throw new Error("unauthorized"); }
     if (!res.ok) throw new Error(`crisis status → ${res.status}`);
-    return res.json();
-  },
-
-  /** Global client config — the capture scale (tier3 | ems98). */
-  config: () => get<{ damageScale: string }>("/config"),
-  async setConfig(damageScale: string): Promise<{ damageScale: string }> {
-    const res = await fetch(`${API}/config`, {
-      method: "PATCH",
-      headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ damageScale }),
-    });
-    if (res.status === 401) { on401(); throw new Error("unauthorized"); }
-    if (!res.ok) throw new Error(`config → ${res.status}`);
     return res.json();
   },
 

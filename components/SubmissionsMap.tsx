@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Map as MlMap, GeoJSONSource, MapGeoJSONFeature } from "maplibre-gl";
-import { DAMAGE_COLORS, DAMAGE_TIER_COLORS } from "@/lib/types";
+import { DAMAGE_TIER_COLORS } from "@/lib/types";
 import type { Report } from "@/lib/types";
 
 const ANTAKYA = { lat: 36.2021, lng: 36.1601 };
@@ -159,12 +159,6 @@ export function SubmissionsMap({
             "circle-color": [
               "match",
               ["get", "damage"],
-              "none", DAMAGE_COLORS.none,
-              "slight", DAMAGE_COLORS.slight,
-              "moderate", DAMAGE_COLORS.moderate,
-              "severe", DAMAGE_COLORS.severe,
-              "destroyed", DAMAGE_COLORS.destroyed,
-              // 3-tier vocabulary (when the global scale is tier3)
               "minimal", DAMAGE_TIER_COLORS.minimal,
               "partial", DAMAGE_TIER_COLORS.partial,
               "complete", DAMAGE_TIER_COLORS.complete,

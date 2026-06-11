@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   ListChecks,
   AlertTriangle,
-  Settings as SettingsIcon,
   Globe,
   ExternalLink,
 } from "lucide-react";
@@ -29,7 +28,6 @@ const NAV = [
   { href: "/dispatch", label: "Verification & triage", icon: ListChecks },
   { href: "/map", label: "Live map", icon: MapIcon },
   { href: "/reports", label: "Reports", icon: ClipboardList },
-  { href: "/settings", label: "Settings", icon: SettingsIcon },
 ];
 
 export function Sidebar() {

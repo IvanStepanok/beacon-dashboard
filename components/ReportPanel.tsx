@@ -17,11 +17,11 @@ import {
   DAMAGE_TIER_LABELS, CLUSTER_LABELS,
   ELECTRICITY_LABELS, HEALTH_SERVICES_LABELS, PRESSING_NEED_LABELS, hasModular,
   damageLabel, damageColor,
-  type DamageLevel, type Report, type Verification,
+  type DamageTier, type Report, type Verification,
 } from "@/lib/types";
 
 interface TimelineVersion {
-  reportId: string; v: number; damage: DamageLevel; at: string; ageMin: number; isCurrent: boolean; by: string; note: string;
+  reportId: string; v: number; damage: DamageTier; at: string; ageMin: number; isCurrent: boolean; by: string; note: string;
 }
 
 /**
@@ -209,7 +209,6 @@ export function ReportPanel({
               <SectionTitle>Assessment</SectionTitle>
               <dl className="grid grid-cols-2 gap-x-5 gap-y-3 text-[13px]">
                 <Field label="Damage (3-tier)">{DAMAGE_TIER_LABELS[report.damageTier]}</Field>
-                <Field label="Grade detail">{damageLabel(report.damage)}</Field>
                 <Field label="Infrastructure"><span className="capitalize">{report.infraTypes.join(", ") || "—"}</span></Field>
                 {report.infraName && <Field label="Infrastructure name">{report.infraName}</Field>}
                 <Field label="Crisis type"><span className="capitalize">{report.crisisNature.join(", ") || "—"}</span></Field>

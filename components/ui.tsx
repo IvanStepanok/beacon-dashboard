@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import { DAMAGE_COLORS, DAMAGE_LABELS, DAMAGE_TIER_COLORS, DAMAGE_TIER_LABELS, VERIFICATION_LABELS } from "@/lib/types";
-import type { DamageLevel, DamageTier, Verification } from "@/lib/types";
+import { DAMAGE_TIER_COLORS, DAMAGE_TIER_LABELS, VERIFICATION_LABELS } from "@/lib/types";
+import type { Verification } from "@/lib/types";
 
 export function Card({
   children,
@@ -33,11 +33,10 @@ export function SectionTitle({
   );
 }
 
-// Vocabulary-agnostic: renders either a 5-level EMS-98 grade OR a 3-tier value.
+// Renders a 3-tier damage value (the mandated classification).
 export function DamageBadge({ level }: { level: string }) {
-  const isTier = level === "minimal" || level === "partial" || level === "complete";
-  const color = isTier ? DAMAGE_TIER_COLORS[level as DamageTier] : DAMAGE_COLORS[level as DamageLevel];
-  const label = isTier ? DAMAGE_TIER_LABELS[level as DamageTier] : DAMAGE_LABELS[level as DamageLevel];
+  const color = (DAMAGE_TIER_COLORS as Record<string, string>)[level] ?? "#9aa";
+  const label = (DAMAGE_TIER_LABELS as Record<string, string>)[level] ?? level;
   return (
     <span
       className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold"

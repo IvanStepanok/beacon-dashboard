@@ -1,17 +1,7 @@
 import type { StatsOverview } from "@/lib/api";
 import { crisisTitle } from "@/lib/format";
 import { DAMAGE_TIER_LABELS, DAMAGE_TIER_ORDER, VERIFICATION_LABELS, damageLabel } from "@/lib/types";
-import type { Crisis, DamageTier, Verification } from "@/lib/types";
-
-// Client-side rollup fallback for legacy 5-level-only data (same rule as
-// DamageBreakdown) — used only when the server omits damageTierCounts.
-function toTiers(counts: Record<string, number>): Record<DamageTier, number> {
-  return {
-    minimal: (counts.none ?? 0) + (counts.slight ?? 0),
-    partial: (counts.moderate ?? 0) + (counts.severe ?? 0),
-    complete: counts.destroyed ?? 0,
-  };
-}
+import type { Crisis, Verification } from "@/lib/types";
 
 const VERIFS: Verification[] = ["verified", "pending", "flagged"];
 
@@ -34,7 +24,7 @@ export function PrintBrief({
   // the timestamp states the data's freshness, not the moment Ctrl+P was pressed.
   generatedAt: string;
 }) {
-  const tiers = stats.damageTierCounts ?? toTiers(stats.damageCounts);
+  const tiers = stats.damageTierCounts;
 
   return (
     <section className="hidden px-2 font-sans text-[13px] leading-relaxed text-black print:block">

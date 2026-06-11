@@ -11,8 +11,8 @@ import { TimeSeriesChart } from "@/components/TimeSeriesChart";
 import { DamageBreakdown } from "@/components/DamageBreakdown";
 import { api, type StatsOverview } from "@/lib/api";
 import { relativeTime, crisisTitle, crisisArea } from "@/lib/format";
-import { DAMAGE_COLORS, damageColor } from "@/lib/types";
-import type { Crisis, DamageLevel } from "@/lib/types";
+import { DAMAGE_TIER_COLORS, damageColor } from "@/lib/types";
+import type { Crisis } from "@/lib/types";
 
 export default function OverviewPage() {
   const [s, setS] = useState<StatsOverview | null>(null);
@@ -53,7 +53,6 @@ export default function OverviewPage() {
   }, []);
 
   if (!s) return <div className="grid h-screen place-items-center text-ink3">Loading overview…</div>;
-  const dmg = s.damageCounts as Record<DamageLevel, number>;
 
   return (
     <>
@@ -93,7 +92,7 @@ export default function OverviewPage() {
             value={`${s.severePlusPct}%`}
             sub={`${(s.damageTierCounts?.partial ?? 0) + (s.damageTierCounts?.complete ?? 0)} partial + complete`}
             icon={<ShieldAlert size={16} />}
-            accent={DAMAGE_COLORS.severe}
+            accent={DAMAGE_TIER_COLORS.complete}
           />
           <StatCard
             label="Verified"
@@ -135,7 +134,7 @@ export default function OverviewPage() {
           </Card>
           <Card>
             <SectionTitle>Damage breakdown</SectionTitle>
-            <DamageBreakdown counts={dmg} tierCounts={s.damageTierCounts} />
+            <DamageBreakdown tierCounts={s.damageTierCounts} />
           </Card>
         </div>
 

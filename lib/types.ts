@@ -1,8 +1,6 @@
 // Canonical contract — mirrors the Go backend's camelCase JSON (superset).
 
-export type DamageLevel = "none" | "slight" | "moderate" | "severe" | "destroyed";
-// The challenge's REQUIRED core indicator: a 3-level classification. Either
-// vocabulary (5-level EMS-98 or 3-tier) rolls up to this.
+// The challenge's REQUIRED core indicator: a 3-level damage classification.
 export type DamageTier = "minimal" | "partial" | "complete";
 export type Verification = "pending" | "verified" | "flagged";
 export type DebrisState = "yes" | "no" | "unsure";
@@ -44,7 +42,7 @@ export interface Modular {
 
 export interface Report {
   id: string;
-  damage: DamageLevel;
+  damage: DamageTier;
   possiblyDamaged: boolean;
   infra: string[];
   infraTypes: string[];
@@ -76,7 +74,7 @@ export interface Report {
   supersedesReportId?: string;
   description?: ReportDescription;
   modular?: Modular;
-  aiLevel?: DamageLevel;
+  aiLevel?: DamageTier;
   aiConfidence?: number;
   sizeMb: number;
   ageMin: number;
@@ -109,8 +107,8 @@ export interface Crisis {
 }
 
 // Area-level aggregate from /reports/area-groups: per-place report count + worst
-// damage (raw grade, either vocabulary) + its canonical 3-tier rollup. Carries
-// NO coordinates — safe to render on the public community view.
+// damage tier + its canonical 3-tier rollup. Carries NO coordinates — safe to
+// render on the public community view.
 export interface AreaGroup {
   area: string;
   count: number;
@@ -118,26 +116,8 @@ export interface AreaGroup {
   worstTier: DamageTier;
 }
 
-// ── display maps ──────────────────────────────────────────────────────
-
-// 5-level ordinal, trauma-informed (muted green → terracotta, never pure red).
-export const DAMAGE_COLORS: Record<DamageLevel, string> = {
-  none: "#3FA463",
-  slight: "#8FB339",
-  moderate: "#D49A2A",
-  severe: "#C8743C",
-  destroyed: "#B66250",
-};
-export const DAMAGE_LABELS: Record<DamageLevel, string> = {
-  none: "No visible damage",
-  slight: "Slight",
-  moderate: "Moderate",
-  severe: "Severe",
-  destroyed: "Destroyed",
-};
-export const DAMAGE_ORDER: DamageLevel[] = ["none", "slight", "moderate", "severe", "destroyed"];
-
-// ── 3-tier (required core indicator) ──────────────────────────────────
+// ── 3-tier display maps (the required core indicator) ─────────────────
+// Trauma-informed ramp: muted green → amber → terracotta, never pure red.
 export const DAMAGE_TIER_LABELS: Record<DamageTier, string> = {
   minimal: "Minimal / no damage",
   partial: "Partially damaged",
@@ -150,20 +130,19 @@ export const DAMAGE_TIER_COLORS: Record<DamageTier, string> = {
 };
 export const DAMAGE_TIER_ORDER: DamageTier[] = ["minimal", "partial", "complete"];
 
-/** Roll up either vocabulary (5-level EMS-98 or 3-tier) to the required 3 tiers. */
+/** Normalize a damage value to the 3 mandated tiers (values are 3-tier now; defensive). */
 export function rollupTier(d: string): DamageTier {
-  if (d === "moderate" || d === "severe" || d === "partial") return "partial";
-  if (d === "destroyed" || d === "complete") return "complete";
-  // none/slight/minimal — and any unknown value, matching the server's RollupTier default.
+  if (d === "partial") return "partial";
+  if (d === "complete") return "complete";
   return "minimal";
 }
 
-// Vocabulary-agnostic label/color for any damage value (5-level OR 3-tier).
+/** Label/color for a 3-tier damage value (unknown → graceful fallback). */
 export function damageLabel(d: string): string {
-  return (DAMAGE_LABELS as Record<string, string>)[d] ?? (DAMAGE_TIER_LABELS as Record<string, string>)[d] ?? d;
+  return (DAMAGE_TIER_LABELS as Record<string, string>)[d] ?? d;
 }
 export function damageColor(d: string): string {
-  return (DAMAGE_COLORS as Record<string, string>)[d] ?? (DAMAGE_TIER_COLORS as Record<string, string>)[d] ?? "#9aa";
+  return (DAMAGE_TIER_COLORS as Record<string, string>)[d] ?? "#9aa";
 }
 
 export const VERIFICATION_LABELS: Record<Verification, string> = {

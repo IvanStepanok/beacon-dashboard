@@ -9,8 +9,8 @@ import { UpdatedAgo, TruncationBanner } from "@/components/Freshness";
 import { api } from "@/lib/api";
 import { relativeTime, locationLabel, coordsLabel, crisisTitle } from "@/lib/format";
 import {
-  DAMAGE_COLORS, DAMAGE_LABELS, DAMAGE_ORDER, CLUSTER_LABELS, damageLabel,
-  type Crisis, type DamageLevel, type Report, type Verification,
+  DAMAGE_TIER_COLORS, DAMAGE_TIER_LABELS, DAMAGE_TIER_ORDER, CLUSTER_LABELS, damageLabel,
+  type Crisis, type DamageTier, type Report, type Verification,
 } from "@/lib/types";
 
 const VERIF_FILTERS: Verification[] = ["verified", "pending", "flagged"];
@@ -19,7 +19,7 @@ export default function MapPage() {
   const [all, setAll] = useState<Report[]>([]);
   const [total, setTotal] = useState(0);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
-  const [damage, setDamage] = useState<Set<DamageLevel>>(new Set());
+  const [damage, setDamage] = useState<Set<DamageTier>>(new Set());
   const [verif, setVerif] = useState<Set<Verification>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Crisis scope: the map is always scoped to ONE crisis (default = active).
@@ -115,7 +115,7 @@ export default function MapPage() {
         )}
         <div className="flex items-center gap-2">
           <span className="text-[12px] font-semibold uppercase tracking-wide text-ink3">Damage</span>
-          {DAMAGE_ORDER.map((d) => {
+          {DAMAGE_TIER_ORDER.map((d) => {
             const on = damage.has(d);
             return (
               <button
@@ -123,13 +123,13 @@ export default function MapPage() {
                 onClick={() => toggle(damage, d, setDamage)}
                 className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors"
                 style={{
-                  borderColor: on ? DAMAGE_COLORS[d] : "var(--color-line)",
-                  backgroundColor: on ? `${DAMAGE_COLORS[d]}1f` : "transparent",
-                  color: on ? DAMAGE_COLORS[d] : "var(--color-ink2)",
+                  borderColor: on ? DAMAGE_TIER_COLORS[d] : "var(--color-line)",
+                  backgroundColor: on ? `${DAMAGE_TIER_COLORS[d]}1f` : "transparent",
+                  color: on ? DAMAGE_TIER_COLORS[d] : "var(--color-ink2)",
                 }}
               >
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: DAMAGE_COLORS[d] }} />
-                {DAMAGE_LABELS[d]}
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: DAMAGE_TIER_COLORS[d] }} />
+                {DAMAGE_TIER_LABELS[d]}
               </button>
             );
           })}
@@ -174,11 +174,11 @@ export default function MapPage() {
         />
 
         <div className="pointer-events-none absolute bottom-4 left-4 rounded-xl border border-line bg-surface/95 px-3 py-2 shadow-sm backdrop-blur">
-          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink3">Damage grade (EMS-98)</div>
-          {DAMAGE_ORDER.map((d) => (
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-ink3">Damage classification</div>
+          {DAMAGE_TIER_ORDER.map((d) => (
             <div key={d} className="flex items-center gap-2 py-0.5">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: DAMAGE_COLORS[d] }} />
-              <span className="text-[12px] text-ink2">{DAMAGE_LABELS[d]}</span>
+              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: DAMAGE_TIER_COLORS[d] }} />
+              <span className="text-[12px] text-ink2">{DAMAGE_TIER_LABELS[d]}</span>
             </div>
           ))}
         </div>

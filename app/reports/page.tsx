@@ -9,8 +9,8 @@ import { DamageBadge, VerificationBadge } from "@/components/ui";
 import { api, type ReportFilters } from "@/lib/api";
 import { relativeTime, locationLabel, areaLabel } from "@/lib/format";
 import {
-  DAMAGE_COLORS, DAMAGE_LABELS, DAMAGE_ORDER,
-  type Crisis, type DamageLevel, type Report, type Verification,
+  DAMAGE_TIER_COLORS, DAMAGE_TIER_LABELS, DAMAGE_TIER_ORDER,
+  type Crisis, type DamageTier, type Report, type Verification,
 } from "@/lib/types";
 
 const VERIF_FILTERS: Verification[] = ["verified", "pending", "flagged"];
@@ -18,7 +18,7 @@ const VERIF_FILTERS: Verification[] = ["verified", "pending", "flagged"];
 export default function ReportsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [damage, setDamage] = useState<Set<DamageLevel>>(new Set());
+  const [damage, setDamage] = useState<Set<DamageTier>>(new Set());
   const [verif, setVerif] = useState<Set<Verification>>(new Set());
   const [items, setItems] = useState<Report[]>([]);
   const [total, setTotal] = useState(0);
@@ -114,7 +114,7 @@ export default function ReportsPage() {
             />
           </div>
           <div className="flex items-center gap-2">
-            {DAMAGE_ORDER.map((d) => {
+            {DAMAGE_TIER_ORDER.map((d) => {
               const on = damage.has(d);
               return (
                 <button
@@ -122,13 +122,13 @@ export default function ReportsPage() {
                   onClick={() => toggle(damage, d, setDamage)}
                   className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors"
                   style={{
-                    borderColor: on ? DAMAGE_COLORS[d] : "var(--color-line)",
-                    backgroundColor: on ? `${DAMAGE_COLORS[d]}1f` : "transparent",
-                    color: on ? DAMAGE_COLORS[d] : "var(--color-ink2)",
+                    borderColor: on ? DAMAGE_TIER_COLORS[d] : "var(--color-line)",
+                    backgroundColor: on ? `${DAMAGE_TIER_COLORS[d]}1f` : "transparent",
+                    color: on ? DAMAGE_TIER_COLORS[d] : "var(--color-ink2)",
                   }}
                 >
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: DAMAGE_COLORS[d] }} />
-                  {DAMAGE_LABELS[d]}
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: DAMAGE_TIER_COLORS[d] }} />
+                  {DAMAGE_TIER_LABELS[d]}
                 </button>
               );
             })}
