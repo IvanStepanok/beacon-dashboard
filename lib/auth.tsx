@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // neither may redirect to /login, with or without a token. Standalone routes
     // also skip the me() bootstrap entirely: /public must never spend the stored
     // analyst JWT (a transient 401 there would silently clear the session).
-    const standalone = pathname === "/login" || pathname === "/public";
+    const standalone = pathname === "/" || pathname === "/login" || pathname === "/public";
     if (!getToken() || standalone) {
       // Initial auth bootstrap: synchronously settling loading on mount is intentional.
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { token, user } = await api.login(email, password);
     setToken(token);
     setUser(user);
-    router.replace("/");
+    router.replace("/overview");
   };
   const logout = () => {
     clearToken();

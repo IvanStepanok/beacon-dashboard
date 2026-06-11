@@ -50,6 +50,80 @@ body {
   font-size: 10px;
 }
 
+/* ---------- Landing page (scroll-driven story) ---------- */
+
+/* Reveal-on-scroll: beats rise + fade in once they enter the viewport. */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1), transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lp-reveal.lp-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Phone screens cross-fade/slide as the story scrolls. */
+.lp-screen {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.48s cubic-bezier(0.22, 1, 0.36, 1), transform 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+.lp-screen.lp-active {
+  opacity: 1;
+  transform: none;
+}
+
+/* Perpetual micro-loops inside the phone. */
+@keyframes lp-ping {
+  0% { transform: scale(1); opacity: 0.7; }
+  80%, 100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes lp-drop {
+  0% { transform: translateY(-14px) scale(0.6); opacity: 0; }
+  60% { transform: translateY(2px) scale(1.05); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes lp-fill {
+  0% { width: 8%; }
+  70% { width: 92%; }
+  100% { width: 92%; }
+}
+@keyframes lp-settle {
+  0% { width: 18%; }
+  55% { width: 91%; }
+  70% { width: 82%; }
+  100% { width: 86%; }
+}
+@keyframes lp-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@keyframes lp-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(220%); }
+}
+.lp-ping { animation: lp-ping 2.2s cubic-bezier(0, 0, 0.2, 1) infinite; }
+.lp-drop { animation: lp-drop 0.5s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.lp-fill { animation: lp-fill 2.6s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+.lp-settle { animation: lp-settle 2.8s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.lp-blink { animation: lp-blink 1.6s ease-in-out infinite; }
+.lp-sweep { animation: lp-sweep 2.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal,
+  .lp-screen {
+    transition: opacity 0.3s ease;
+    transform: none;
+  }
+  .lp-ping, .lp-drop, .lp-fill, .lp-settle, .lp-blink, .lp-sweep {
+    animation: none;
+  }
+}
+
 /* Print (Overview's "Print situation brief" → browser Save-as-PDF): the app
    chrome hides itself via print:hidden — here we just force a clean white
    page with sane margins for the brief. */

@@ -21,9 +21,9 @@ const notoMono = Noto_Sans_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Beacon · Analyst Console",
+  title: "Beacon — crisis damage mapping by the people on the ground",
   description:
-    "Real-time community damage assessment for crisis response — UNDP Beacon analyst console.",
+    "Three taps to report building damage, works with zero connectivity, verified by analysts. Community crisis mapping for UNDP response teams.",
 };
 
 export default function RootLayout({

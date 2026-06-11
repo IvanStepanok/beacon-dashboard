@@ -22,7 +22,7 @@ import { crisisTitle } from "@/lib/format";
 import type { Crisis } from "@/lib/types";
 
 const NAV = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/crises", label: "Crises", icon: AlertTriangle },
   // Route path stays /dispatch (links in the wild) — only the label changed.
   { href: "/dispatch", label: "Verification & triage", icon: ListChecks },

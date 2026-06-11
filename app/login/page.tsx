@@ -96,12 +96,15 @@ export default function LoginPage() {
         </div>
 
         {/* No-login surface: the aggregated community heatmap (Q18). */}
-        <div className="mt-4 text-center">
+        <div className="mt-4 flex items-center justify-center gap-5">
           <Link
             href="/public"
             className="inline-flex items-center gap-1.5 text-[13px] font-medium text-primary hover:text-primary-ink"
           >
-            <Globe size={14} /> Public community view — no sign-in needed
+            <Globe size={14} /> Public community view
+          </Link>
+          <Link href="/" className="text-[13px] font-medium text-ink3 hover:text-ink">
+            About Beacon
           </Link>
         </div>
       </div>
