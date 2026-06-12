@@ -83,7 +83,6 @@ export function ActOrbit() {
       });
       gsap.set([".orb-beat-1", ".orb-beat-2"], { autoAlpha: 0, y: 48 });
       gsap.set(".orb-hud", { autoAlpha: 0 });
-      gsap.set(".orb-flash", { opacity: 0 });
 
       tl.to(".orb-beat-0", { autoAlpha: 0, y: -48, duration: 0.05 }, 0.09)
         .to(".orb-beat-1", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.16)
@@ -92,11 +91,9 @@ export function ActOrbit() {
         .to(".orb-beat-2", { autoAlpha: 0, y: -48, duration: 0.05 }, 0.5)
         .to(".orb-hud", { autoAlpha: 1, duration: 0.03 }, 0.56)
         .to(".orb-hud", { autoAlpha: 0, duration: 0.03 }, 0.87)
-        /* the cloud shell fully wraps the globe from 0.8 — let IT carry the
-           transition and keep the pure white to a blink, not a corridor */
-        .to(".orb-flash", { opacity: 1, duration: 0.06, ease: "power1.in" }, 0.9)
-        /* hold the white through the act's end — the ground veil takes over */
-        .to(".orb-flash", { opacity: 1, duration: 0.04, ease: "none" }, 0.96)
+        /* the film enters the cloud deck here — the scrims bow out so the
+           act boundary (stage swap under the continuous video) is bare */
+        .to(".orb-scrims", { autoAlpha: 0, duration: 0.06 }, 0.88)
         .set({}, {}, 1);
     },
     { scope: root },
@@ -106,12 +103,13 @@ export function ActOrbit() {
     <section ref={root} id="act-orbit" data-act data-header-theme="dark" className="relative" style={{ height: "560vh" }}>
       <div className="orb-stage sticky top-0 h-dvh overflow-hidden">
         {/* readability scrims behind the copy */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#04090F]/45 lg:hidden" />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 hidden w-[58%] lg:block"
-          style={{ background: "linear-gradient(90deg, rgba(3,8,14,0.78) 0%, rgba(3,8,14,0.32) 55%, rgba(3,8,14,0) 100%)" }}
-        />
+        <div aria-hidden className="orb-scrims pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-[#04090F]/45 lg:hidden" />
+          <div
+            className="absolute inset-y-0 left-0 hidden w-[58%] lg:block"
+            style={{ background: "linear-gradient(90deg, rgba(3,8,14,0.78) 0%, rgba(3,8,14,0.32) 55%, rgba(3,8,14,0) 100%)" }}
+          />
+        </div>
         <div className="relative mx-auto h-full max-w-[1400px] px-5 sm:px-10">
           {/* ── beat 0 · hero ── */}
           <div className="orb-beat-0 absolute left-5 top-[16%] max-w-[600px] sm:left-10 lg:left-16 lg:top-1/2 lg:-translate-y-1/2">
@@ -188,7 +186,6 @@ export function ActOrbit() {
         </div>
 
         {/* through-the-clouds flash — hands off to the ground act */}
-        <div className="orb-flash pointer-events-none absolute inset-0 z-20 bg-white opacity-0" />
       </div>
     </section>
   );

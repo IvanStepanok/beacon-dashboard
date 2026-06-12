@@ -1,13 +1,13 @@
 "use client";
 
 /* ACT II — THE FLIGHT. 600vh. One continuous shot: we punch out of the cloud
-   deck above the Selmara maquette (the 3D city lives in the fixed canvas
+   deck above Selmara (the scroll-scrubbed film renders in the fixed video
    behind this transparent stage), drift down from bird's eye, level out, and
    land at eye height on a street facing the collapsed building — then the
    phone rises and the capture happens. The master scrub feeds
-   orbitBridge.city; the same trigger drives the DOM beats, so the WebGL
-   camera and the copy can never drift apart. The altitude HUD continues the
-   orbit act's readout: kilometres up there, metres down here. */
+   orbitBridge.city; the same trigger drives the DOM beats, so the film and
+   the copy can never drift apart. The altitude HUD continues the orbit
+   act's readout: kilometres up there, metres down here. */
 
 import { useRef } from "react";
 import { gsap, ScrollTrigger, useGSAP } from "../gsap";
@@ -52,19 +52,15 @@ export function ActGround() {
         onToggle: (self) => {
           setActOn("city", self.isActive);
           /* this section overlaps the orbit act's last 100vh, so the pin is
-             the cut point — and it happens under full white on both sides:
-             the veil gate switches on (the stage was transparent while it
-             slid up over the orbit), and the orbit's released stage (still
-             showing its flash and scrims) switches off so it can't ghost
-             through this transparent act while it slides out of the flow. */
-          gsap.set(".gm-veil-gate", { opacity: self.isActive ? 1 : 0 });
-          /* lives in the orbit act — outside this useGSAP scope, so pass
-             the element itself, not a (scoped) selector string */
+             the cut point — it happens inside the film's cloud deck. Hide
+             the orbit's released stage so its chrome can't ghost through
+             this transparent act while it slides out of the flow. (Lives in
+             the orbit act — outside this useGSAP scope, so pass elements,
+             not a scoped selector string.) */
           gsap.set(document.querySelectorAll(".orb-stage"), { autoAlpha: self.isActive ? 0 : 1 });
         },
       });
       setActOn("city", master.isActive);
-      gsap.set(".gm-veil-gate", { opacity: master.isActive ? 1 : 0 });
       gsap.set(document.querySelectorAll(".orb-stage"), { autoAlpha: master.isActive ? 0 : 1 });
 
       /* DOM beats on the same scroll axis (slight lag for weight). */
@@ -79,8 +75,7 @@ export function ActGround() {
       });
 
       tl
-        /* out of the whiteout — fast: the white blink is a cut, not a tunnel */
-        .fromTo(".gm-veil", { opacity: 1 }, { opacity: 0, duration: 0.03, ease: "power1.out" }, 0)
+        /* out of the cloud deck — the video carries the reveal */
         .to(".gm-meta", { autoAlpha: 1, x: 0, duration: 0.04 }, 0.045)
         .to(".gm-hud", { autoAlpha: 1, duration: 0.03 }, 0.045)
         /* bird's eye copy */
@@ -122,7 +117,7 @@ export function ActGround() {
        other in (the "white tunnel"). The stage stays transparent during the
        overlap (veil gate above). */
     <section ref={root} id="act-ground" data-act data-header-theme="light" className="relative z-10 -mt-[100vh]" style={{ height: "600vh" }}>
-      {/* the stage is transparent — the 3D maquette renders behind it */}
+      {/* the stage is transparent — the film renders behind it */}
       <div className="sticky top-0 h-dvh overflow-hidden">
         <div className="relative mx-auto h-full max-w-[1400px] px-5 sm:px-10">
           {/* meta strip — same column as the rest of the copy */}
@@ -210,12 +205,6 @@ export function ActGround() {
         </div>
 
         {/* arrival veil — we exit the orbit act's whiteout inside this one */}
-        {/* gate: opacity flips with the act's pin (master onToggle) so the
-            stage stays fully transparent while it slides up over the orbit
-            act's last 100vh — the inner veil keeps its scrubbed fade */}
-        <div className="gm-veil-gate pointer-events-none absolute inset-0 z-20 opacity-0">
-          <div className="gm-veil absolute inset-0 bg-white" />
-        </div>
       </div>
     </section>
   );

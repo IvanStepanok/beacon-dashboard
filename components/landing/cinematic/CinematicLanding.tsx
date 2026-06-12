@@ -19,7 +19,7 @@ import Link from "next/link";
 import Lenis from "lenis";
 import { Globe, MonitorCheck, Radar } from "lucide-react";
 import { gsap, ScrollTrigger } from "./gsap";
-import { OrbitCanvas } from "./OrbitCanvas";
+import { FilmVideo } from "./FilmVideo";
 import { ActOrbit } from "./acts/ActOrbit";
 import { ActGround } from "./acts/ActGround";
 import { ActOffline } from "./acts/ActOffline";
@@ -212,7 +212,7 @@ export default function CinematicLanding() {
 
   return (
     <div className="relative bg-white">
-      <OrbitCanvas />
+      <FilmVideo />
       <FilmChrome lenisRef={lenisRef} />
       <main>
         <ActOrbit />

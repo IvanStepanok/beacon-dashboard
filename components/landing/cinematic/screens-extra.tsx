@@ -25,9 +25,9 @@ export function CameraScreen({ phase }: { phase: "aim" | "shot" | "ai" }) {
   const scrim = "rgba(0,0,0,0.45)";
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ background: C.ink }}>
-      {/* viewfinder feed + vignette */}
+      {/* viewfinder feed + vignette — the building the film just landed on */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/landing/damage-houses.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
+      <img src="/landing/damage-picture.jpg" alt="" className="absolute inset-0 h-full w-full object-cover" />
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: "radial-gradient(120% 90% at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,0.45) 100%)" }}
@@ -99,7 +99,7 @@ export function CameraScreen({ phase }: { phase: "aim" | "shot" | "ai" }) {
       {phase !== "aim" && (
         <span className="cam-thumb absolute bottom-[40px] left-[20px] z-10 block h-[56px] w-[56px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/landing/damage-houses.jpg" alt="" className="h-full w-full rounded-[12px] object-cover ring-2 ring-white" />
+          <img src="/landing/damage-picture.jpg" alt="" className="h-full w-full rounded-[12px] object-cover ring-2 ring-white" />
           <span
             className="absolute -right-[6px] -top-[6px] grid h-[20px] w-[20px] place-items-center rounded-full text-[11px] font-bold text-white"
             style={{ background: C.primary, border: "2px solid #fff" }}
