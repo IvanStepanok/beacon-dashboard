@@ -82,6 +82,7 @@ export function FilmVideo() {
     if (!video) return;
     let raf = 0;
     let rendered = -1;
+    let seekingSince = 0;
 
     const tick = () => {
       raf = requestAnimationFrame(tick);
@@ -91,12 +92,53 @@ export function FilmVideo() {
       /* ease toward the scroll target; snap when close so the frame settles */
       const d = target - rendered;
       rendered = Math.abs(d) < 0.012 ? target : rendered + d * 0.22;
-      if (Math.abs(video.currentTime - rendered) > 0.016 && !video.seeking) {
+      if (video.seeking) {
+        /* Safari watchdog: a seek issued around a tab switch can stay
+           `seeking` forever after the decoder was parked — re-issue it
+           instead of politely waiting for a `seeked` that never comes */
+        const now = performance.now();
+        if (!seekingSince) seekingSince = now;
+        else if (now - seekingSince > 700) {
+          seekingSince = 0;
+          video.currentTime = rendered;
+        }
+        return;
+      }
+      seekingSince = 0;
+      if (Math.abs(video.currentTime - rendered) > 0.016) {
         video.currentTime = rendered;
       }
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+
+    /* Safari parks the media pipeline when the tab/window goes to the
+       background; scrubbing via currentTime never wakes it back up. On
+       return, a muted play()/pause() round-trip re-arms the decoder, then
+       we re-seek to wherever the scroll sits. (pageshow covers bfcache.) */
+    const reArm = () => {
+      if (document.visibilityState !== "visible") return;
+      const t = rendered >= 0 ? rendered : video.currentTime;
+      const p = video.play();
+      if (p && typeof p.then === "function") {
+        p.then(() => {
+          video.pause();
+          video.currentTime = t;
+        }).catch(() => {
+          video.currentTime = t;
+        });
+      } else {
+        video.pause();
+        video.currentTime = t;
+      }
+    };
+    document.addEventListener("visibilitychange", reArm);
+    window.addEventListener("pageshow", reArm);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      document.removeEventListener("visibilitychange", reArm);
+      window.removeEventListener("pageshow", reArm);
+    };
   }, []);
 
   return (
