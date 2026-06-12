@@ -17,22 +17,19 @@ import { useEffect, useRef, useState } from "react";
 import { orbitBridge, canvasVisible, onBridgeChange } from "./bridge";
 
 /* Video timeline anchors (seconds). The act boundary hides inside the cloud
-   deck; the street arrives with the flight's end so the capture beats play
-   against an almost-still final push-in. */
+   deck; the flight sails all the way to the film's final frame and FREEZES
+   there for the whole capture sequence — a slow residual push-in read as
+   stutter (frames flipping once per ~25vh of scroll), and a frozen frame
+   also can't drift when the reader nudges the wheel mid-beat. */
 const T_CLOUDS = 4.2; /* orbit act end / ground act start — inside the deck */
-const T_STREET = 9.6; /* ground FLIGHT_END — eye level at the building */
-const T_LAST = 10.0; /* keep a hair under duration: seeking to the exact
-                        end fires `ended` and some browsers snap to 0 */
+const T_END = 9.96; /* the last full frame — a hair under duration: seeking
+                       to the exact end fires `ended` and can snap to 0 */
 const FLIGHT_END = 0.62; /* must match cityLayout's FLIGHT_END */
 
 function targetTime() {
   if (orbitBridge.cityOn || orbitBridge.city > 0) {
-    const p = orbitBridge.city;
-    if (p >= FLIGHT_END) {
-      /* street: a barely-perceptible dolly while the phone beats play */
-      return T_STREET + ((p - FLIGHT_END) / (1 - FLIGHT_END)) * (T_LAST - T_STREET);
-    }
-    return T_CLOUDS + (p / FLIGHT_END) * (T_STREET - T_CLOUDS);
+    const p = Math.min(orbitBridge.city / FLIGHT_END, 1);
+    return T_CLOUDS + p * (T_END - T_CLOUDS);
   }
   return orbitBridge.progress * T_CLOUDS;
 }
@@ -59,7 +56,7 @@ export function FilmVideo() {
     const tick = () => {
       raf = requestAnimationFrame(tick);
       if (video.readyState < 1) return; /* metadata not in yet */
-      const target = Math.min(targetTime(), (video.duration || T_LAST) - 0.04);
+      const target = Math.min(targetTime(), (video.duration || T_END + 0.08) - 0.04);
       if (rendered < 0) rendered = target;
       /* ease toward the scroll target; snap when close so the frame settles */
       const d = target - rendered;
