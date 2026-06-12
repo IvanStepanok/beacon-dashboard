@@ -197,11 +197,67 @@ export default function CinematicLanding() {
     if (reduced) return;
     const lenis = new Lenis({ autoRaf: false, lerp: 0.1, anchors: true });
     lenisRef.current = lenis;
-    lenis.on("scroll", ScrollTrigger.update);
+
+    /* ── state snapping ──────────────────────────────────────────────────
+       Video-editor magnetism: each act lists its stable states (a copy beat
+       fully shown, a phone screen settled) as act-progress fractions —
+       they mirror the acts' own timelines. When scrolling comes to rest
+       within SNAP_RADIUS of a state, Lenis glides the last bit onto it, so
+       landing on a screen stops being precision work; resting farther away
+       (free-scrubbing the flight) is left alone. Desktop-gated: below lg
+       the privacy act flows unstickied and the fractions don't hold. */
+    const SNAP_STATES: [string, number[]][] = [
+      ["act-orbit", [0, 0.42, 0.84]],
+      ["act-ground", [0.28, 0.76, 0.88, 0.97]],
+      ["act-offline", [0.2, 0.47, 0.75]],
+      ["act-privacy", [0.4, 0.78]],
+      ["act-sync", [0.27, 0.5, 0.8, 0.95]],
+    ];
+    const SNAP_RADIUS_VH = 0.22;
+    const SNAP_DELAY_MS = 160;
+    let points: number[] = [];
+    const measure = () => {
+      points = [];
+      if (window.innerWidth < 1024) return;
+      for (const [id, fracs] of SNAP_STATES) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        const top = el.getBoundingClientRect().top + window.scrollY;
+        const span = el.offsetHeight - window.innerHeight;
+        if (span <= 0) continue;
+        for (const f of fracs) points.push(Math.round(top + f * span));
+      }
+      points.sort((a, b) => a - b);
+    };
+    measure();
+    ScrollTrigger.addEventListener("refresh", measure);
+
+    let snapTimer = 0;
+    let glidingUntil = 0; /* ignore the glide's own scroll events */
+    const settle = () => {
+      if (!points.length) return;
+      const y = window.scrollY;
+      let best = points[0];
+      for (const p of points) if (Math.abs(p - y) < Math.abs(best - y)) best = p;
+      const d = Math.abs(best - y);
+      if (d < 2 || d > window.innerHeight * SNAP_RADIUS_VH) return;
+      glidingUntil = performance.now() + 950;
+      lenis.scrollTo(best, { duration: 0.6, easing: (t: number) => 1 - Math.pow(1 - t, 3) });
+    };
+    const onScroll = () => {
+      ScrollTrigger.update();
+      if (performance.now() < glidingUntil) return;
+      window.clearTimeout(snapTimer);
+      snapTimer = window.setTimeout(settle, SNAP_DELAY_MS);
+    };
+    lenis.on("scroll", onScroll);
+
     const raf = (time: number) => lenis.raf(time * 1000);
     gsap.ticker.add(raf);
     gsap.ticker.lagSmoothing(0);
     return () => {
+      window.clearTimeout(snapTimer);
+      ScrollTrigger.removeEventListener("refresh", measure);
       gsap.ticker.remove(raf);
       lenis.destroy();
       lenisRef.current = null;
