@@ -16,8 +16,7 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import { useFrame, useThree } from "@react-three/fiber";
 import { orbitBridge } from "../bridge";
-import { PUFF_VERT, BEAM_FRAG } from "../orbit/shaders";
-import { getCloudTextures } from "../cloudTextures";
+import { PUFF_VERT, PUFF_FRAG, BEAM_FRAG } from "../orbit/shaders";
 import {
   BLOCKS, FLANKS, TREES, HERO, RUBBLE, EPI, HERO_LOOK, CAM_WAYPOINTS,
   FLIGHT_END, flightU, rnd, type CityBlock,
@@ -283,8 +282,7 @@ function CityBeacon() {
 
 function EntryClouds() {
   const group = useRef<THREE.Group>(null!);
-  const textures = useMemo(() => getCloudTextures(), []);
-  const mats = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
+  const mats = useRef<(THREE.ShaderMaterial | null)[]>([]);
   const puffs = useMemo(
     () =>
       Array.from({ length: 10 }, (_, i) => ({
@@ -294,9 +292,7 @@ function EntryClouds() {
           830 + rnd(i, 311) * 300,
         ),
         scale: 170 + rnd(i, 313) * 150,
-        tex: i % 5,
-        roll: rnd(i, 317) * Math.PI * 2,
-        flip: rnd(i, 319) > 0.5 ? 1 : -1,
+        seed: i * 5.13,
       })),
     [],
   );
@@ -306,26 +302,28 @@ function EntryClouds() {
     group.current.visible = o > 0.001;
     group.current.children.forEach((child, i) => {
       child.lookAt(camera.position);
-      child.rotateZ(puffs[i].roll + clock.elapsedTime * 0.015 * puffs[i].flip);
       const m = mats.current[i];
-      if (m) m.opacity = o * 0.95;
+      if (m) {
+        m.uniforms.uTime.value = clock.elapsedTime;
+        m.uniforms.uOpacity.value = o * 0.95;
+      }
     });
   });
 
   return (
     <group ref={group}>
       {puffs.map((p, i) => (
-        <mesh key={i} position={p.pos} scale={[p.scale * p.flip, p.scale, p.scale]}>
-          <planeGeometry args={[2.2, 1.5]} />
-          <meshBasicMaterial
+        <mesh key={i} position={p.pos} scale={p.scale}>
+          <planeGeometry args={[2.4, 1.5]} />
+          <shaderMaterial
             ref={(m) => {
               mats.current[i] = m;
             }}
-            map={textures[p.tex]}
+            vertexShader={PUFF_VERT}
+            fragmentShader={PUFF_FRAG}
+            uniforms={{ uTime: { value: 0 }, uOpacity: { value: 1 }, uSeed: { value: p.seed } }}
             transparent
-            opacity={1}
             depthWrite={false}
-            toneMapped={false}
           />
         </mesh>
       ))}

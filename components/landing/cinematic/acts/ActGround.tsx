@@ -64,29 +64,9 @@ export function ActGround() {
         },
       });
 
-      gsap.set(".gm-cloud", {
-        autoAlpha: 1,
-        scale: 1.75,
-        rotate: (i: number) => [8, -14, 5, -8, 12][i],
-      });
-
       tl
         /* out of the whiteout */
         .fromTo(".gm-veil", { opacity: 1 }, { opacity: 0, duration: 0.06, ease: "power1.out" }, 0)
-        /* the cloud wall parts — same cutouts the orbit act closed with */
-        .to(
-          ".gm-cloud",
-          {
-            autoAlpha: 0,
-            scale: 2.7,
-            xPercent: (i: number) => [-46, 56, -36, 52, -42][i],
-            yPercent: (i: number) => [-32, -42, 46, 36, -26][i],
-            duration: 0.12,
-            stagger: 0.013,
-            ease: "power2.out",
-          },
-          0.005,
-        )
         .to(".gm-meta", { autoAlpha: 1, x: 0, duration: 0.04 }, 0.07)
         .to(".gm-hud", { autoAlpha: 1, duration: 0.03 }, 0.07)
         /* bird's eye copy */
@@ -210,25 +190,6 @@ export function ActGround() {
 
         {/* arrival veil — we exit the orbit act's whiteout inside this one */}
         <div className="gm-veil pointer-events-none absolute inset-0 z-20 bg-white" />
-
-        {/* the parting cloud wall (mirrors the orbit act's close) */}
-        <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden" aria-hidden>
-          {[
-            { src: "/landing/clouds/cloud-1.png", cls: "left-[-12vw] top-[12vh] w-[92vw]" },
-            { src: "/landing/clouds/cloud-2.png", cls: "right-[-16vw] top-[-12vh] w-[78vw]" },
-            { src: "/landing/clouds/cloud-3.png", cls: "bottom-[-16vh] left-[6vw] w-[98vw]" },
-            { src: "/landing/clouds/cloud-4.png", cls: "bottom-[2vh] right-[-8vw] w-[84vw]" },
-            { src: "/landing/clouds/cloud-5.png", cls: "left-[-6vw] top-[-8vh] w-[72vw]" },
-          ].map((c) => (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              key={c.src}
-              src={c.src}
-              alt=""
-              className={`gm-cloud absolute max-w-none will-change-transform [filter:brightness(0.93)] ${c.cls}`}
-            />
-          ))}
-        </div>
       </div>
     </section>
   );
