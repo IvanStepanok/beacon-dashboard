@@ -84,16 +84,21 @@ export function ActOrbit() {
       gsap.set([".orb-beat-1", ".orb-beat-2"], { autoAlpha: 0, y: 48 });
       gsap.set(".orb-hud", { autoAlpha: 0 });
 
-      tl.to(".orb-beat-0", { autoAlpha: 0, y: -48, duration: 0.05 }, 0.09)
-        .to(".orb-beat-1", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.16)
-        .to(".orb-beat-1", { autoAlpha: 0, y: -48, duration: 0.05 }, 0.3)
-        .to(".orb-beat-2", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.37)
-        .to(".orb-beat-2", { autoAlpha: 0, y: -48, duration: 0.05 }, 0.5)
-        .to(".orb-hud", { autoAlpha: 1, duration: 0.03 }, 0.56)
-        .to(".orb-hud", { autoAlpha: 0, duration: 0.03 }, 0.87)
+      /* Generous dwell per title — at 320vh the old fractions flashed past
+         (the hero died after ~20vh of scroll). Beat 2 ("the fastest sensor
+         network is already deployed") rides into the cloud deck and exits
+         right at the film's 4th second — the satellites go blind exactly
+         as the line lands. */
+      tl.to(".orb-beat-0", { autoAlpha: 0, y: -48, duration: 0.05 }, 0.18)
+        .to(".orb-beat-1", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.24)
+        .to(".orb-beat-1", { autoAlpha: 0, y: -48, duration: 0.05 }, 0.6)
+        .to(".orb-beat-2", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.68)
+        .to(".orb-beat-2", { autoAlpha: 0, y: -48, duration: 0.04 }, 0.95)
+        .to(".orb-hud", { autoAlpha: 1, duration: 0.03 }, 0.6)
+        .to(".orb-hud", { autoAlpha: 0, duration: 0.03 }, 0.9)
         /* the film enters the cloud deck here — the scrims bow out so the
            act boundary (stage swap under the continuous video) is bare */
-        .to(".orb-scrims", { autoAlpha: 0, duration: 0.06 }, 0.88)
+        .to(".orb-scrims", { autoAlpha: 0, duration: 0.04 }, 0.96)
         .set({}, {}, 1);
     },
     { scope: root },
