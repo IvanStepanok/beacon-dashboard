@@ -146,7 +146,7 @@ export function ActOrbit() {
           {/* ── beat 1 · satellites & clouds ── */}
           <div className="orb-beat-1 invisible absolute left-5 opacity-0 top-[16%] max-w-[560px] sm:left-10 lg:left-16 lg:top-1/2 lg:-translate-y-1/2">
             <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#FF8A70]">
-              04:17 · Earthquake M 6.4 · Antakya, Hatay
+              04:17 · Earthquake M 6.4 · Selmara, Vetra Province
             </div>
             <h2 className="mt-4 text-[clamp(2rem,4vw,3.4rem)] font-extrabold leading-[1.06] tracking-[-0.02em] text-white">
               Optical satellites need days. And clear skies.
@@ -167,7 +167,8 @@ export function ActOrbit() {
               The fastest sensor network is already deployed.
             </h2>
             <p className="mt-5 max-w-[50ch] text-[16.5px] leading-relaxed text-white/75">
-              Four billion smartphones. Beacon turns each one into a damage — no account, no signal, no training required. Let&apos;s follow one
+              Four billion smartphones. Beacon turns each one into a damage sensor —
+              no account, no signal, no training required. Let&apos;s follow one
               report from the street it starts on.
             </p>
           </div>
@@ -176,7 +177,7 @@ export function ActOrbit() {
           <div className="orb-hud invisible absolute bottom-12 left-5 font-mono text-[12px] uppercase tracking-[0.18em] text-white/85 opacity-0 sm:left-10 lg:left-16">
             <div className="flex items-center gap-3">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#FF5B3D]" />
-              Descending · 36.20°N 36.16°E
+              Descending · Selmara, Vetra Province
             </div>
             <div className="mt-2 text-[20px] font-bold tabular-nums text-white">
               Alt <span ref={altRef}>700</span> km

@@ -9,7 +9,7 @@ import { useRef } from "react";
 import { gsap, useGSAP } from "../gsap";
 
 const EXIF_ROWS = [
-  ["EXIF GPS 36.2012, 36.1613", "stripped"],
+  ["EXIF GPS coordinates", "stripped"],
   ["Device make · serial", "stripped"],
   ["Capture timestamp", "stripped"],
   ["Face — 1 found", "pixelated"],

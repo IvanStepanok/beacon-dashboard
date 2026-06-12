@@ -99,8 +99,8 @@ export function BottomNav({ active }: { active: "map" | "reports" | "profile" })
   );
 }
 
-/* OpenFreeMap Liberty-look basemap of Antakya: warm land, the Asi river,
-   white roads with warm casings, building blocks, park blobs. */
+/* OpenFreeMap Liberty-look basemap of Selmara (fictional): warm land, the
+   Sera river, white roads with warm casings, building blocks, park blobs. */
 export function Basemap({ height = 800 }: { height?: number }) {
   return (
     <svg
@@ -108,7 +108,7 @@ export function Basemap({ height = 800 }: { height?: number }) {
       className="absolute left-0 top-0" preserveAspectRatio="xMidYMid slice"
     >
       <rect width="360" height={height} fill="#F4F1EA" />
-      {/* Asi river */}
+      {/* Sera river */}
       <path d={`M -20 ${height * 0.72} C 80 ${height * 0.66}, 120 ${height * 0.78}, 200 ${height * 0.74} S 340 ${height * 0.62}, 390 ${height * 0.68} L 390 ${height} L -20 ${height} Z`} fill="#AFCFE3" opacity="0.55" />
       <path d={`M -20 ${height * 0.75} C 80 ${height * 0.69}, 120 ${height * 0.8}, 200 ${height * 0.76} S 340 ${height * 0.65}, 390 ${height * 0.71}`} fill="none" stroke="#9FC4DC" strokeWidth="26" strokeLinecap="round" />
       {/* parks */}
@@ -140,8 +140,8 @@ export function Basemap({ height = 800 }: { height?: number }) {
       ].map(([x, fy, w, h], i) => (
         <rect key={`b${i}`} x={x as number} y={height * (fy as number)} width={w as number} height={h as number} rx="1.5" fill="#E7E2D7" transform={`rotate(${(i % 3) * 4 - 4} ${(x as number) + (w as number) / 2} ${height * (fy as number) + (h as number) / 2})`} />
       ))}
-      <text x="186" y={height * 0.37} fontSize="13" fontWeight="500" fill="#8A909B" letterSpacing="0.4">Antakya</text>
-      <text x="40" y={height * 0.81} fontSize="11" fontStyle="italic" fill="#7BA6C2">Asi</text>
+      <text x="186" y={height * 0.37} fontSize="13" fontWeight="500" fill="#8A909B" letterSpacing="0.4">Selmara</text>
+      <text x="40" y={height * 0.81} fontSize="11" fontStyle="italic" fill="#7BA6C2">Sera</text>
     </svg>
   );
 }
@@ -225,7 +225,7 @@ export function MapHomeScreen() {
               Active crisis · Earthquake M 6.4
             </span>
             <span className="block truncate text-[12px] font-medium" style={{ color: C.ink2 }}>
-              Antakya district, Hatay · 4 d ago · UNDP RAPIDA
+              Selmara district, Vetra · 4 d ago · UNDP RAPIDA
             </span>
           </span>
           <span className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-full">
@@ -412,14 +412,14 @@ function ReportRow({
 export function ReportsScreen({ offline = false }: { offline?: boolean }) {
   const rows = offline
     ? ([
-        { id: "b781ccbf", time: "Just now · 8G8V65Q2+7G", tier: "partial", state: "queued", photo: "/landing/damage-street.jpg" },
-        { id: "7900a404", time: "9 min ago · 8G8V65P3+X4", tier: "complete", state: "queued", photo: "/landing/damage-houses.jpg" },
-        { id: "6f2d7988", time: "14 min ago · 8G8V64RW+88", tier: "minimal", state: "queued", photo: "/landing/street-antakya.jpg" },
+        { id: "b781ccbf", time: "Just now · K4-112", tier: "partial", state: "queued", photo: "/landing/damage-street.jpg" },
+        { id: "7900a404", time: "9 min ago · K4-307", tier: "complete", state: "queued", photo: "/landing/damage-houses.jpg" },
+        { id: "6f2d7988", time: "14 min ago · K4-218", tier: "minimal", state: "queued", photo: "/landing/street-antakya.jpg" },
       ] as const)
     : ([
-        { id: "b781ccbf", time: "2 min ago · 8G8V65Q2+7G", tier: "partial", state: "synced", photo: "/landing/damage-street.jpg" },
-        { id: "7900a404", time: "11 min ago · 8G8V65P3+X4", tier: "complete", state: "syncing", photo: "/landing/damage-houses.jpg" },
-        { id: "6f2d7988", time: "16 min ago · 8G8V64RW+88", tier: "minimal", state: "rejected", photo: "/landing/street-antakya.jpg", note: "Duplicate of a nearby report" },
+        { id: "b781ccbf", time: "2 min ago · K4-112", tier: "partial", state: "synced", photo: "/landing/damage-street.jpg" },
+        { id: "7900a404", time: "11 min ago · K4-307", tier: "complete", state: "syncing", photo: "/landing/damage-houses.jpg" },
+        { id: "6f2d7988", time: "16 min ago · K4-218", tier: "minimal", state: "rejected", photo: "/landing/street-antakya.jpg", note: "Duplicate of a nearby report" },
       ] as const);
   return (
     <div className="absolute inset-0 flex flex-col" style={{ background: C.bg }}>
@@ -524,7 +524,7 @@ export function ReportDetailScreen() {
           </div>
           <div className="mt-[8px] flex items-center" style={{ gap: 6 }}>
             <MapPin size={14} color={C.primary} />
-            <span className="font-mono text-[14px] font-medium" style={{ color: C.ink2 }}>8G8V65Q2+7G</span>
+            <span className="font-mono text-[14px] font-medium" style={{ color: C.ink2 }}>K4-112</span>
             <span className="text-[12px] font-medium" style={{ color: C.ink3 }}>· ±12 m</span>
           </div>
         </div>

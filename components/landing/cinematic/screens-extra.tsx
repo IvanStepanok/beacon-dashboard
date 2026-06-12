@@ -173,7 +173,7 @@ export function MapOfflineScreen() {
               Offline — map pack active
             </span>
             <span className="block truncate text-[12px] font-medium" style={{ color: C.ink2 }}>
-              Antakya · 18 MB · cached 3 weeks ago
+              Selmara · 18 MB · cached 3 weeks ago
             </span>
           </span>
         </div>
@@ -230,9 +230,9 @@ function SyncChip({ state }: { state: SyncRowState }) {
 }
 
 const SS_ROWS = [
-  { id: "b781ccbf", time: "1 h ago · 8G8V65Q2+7G", tier: "partial", photo: "/landing/damage-street.jpg" },
-  { id: "7900a404", time: "1 h ago · 8G8V65P3+X4", tier: "complete", photo: "/landing/damage-houses.jpg" },
-  { id: "6f2d7988", time: "2 h ago · 8G8V64RW+88", tier: "minimal", photo: "/landing/street-antakya.jpg" },
+  { id: "b781ccbf", time: "1 h ago · K4-112", tier: "partial", photo: "/landing/damage-street.jpg" },
+  { id: "7900a404", time: "1 h ago · K4-307", tier: "complete", photo: "/landing/damage-houses.jpg" },
+  { id: "6f2d7988", time: "2 h ago · K4-218", tier: "minimal", photo: "/landing/street-antakya.jpg" },
 ] as const;
 
 export function SyncStatusScreen({ stage }: { stage: 0 | 1 | 2 }) {

@@ -1,7 +1,7 @@
 "use client";
 
 /* ACT II — THE FLIGHT. 600vh. One continuous shot: we punch out of the cloud
-   deck above the Antakya maquette (the 3D city lives in the fixed canvas
+   deck above the Selmara maquette (the 3D city lives in the fixed canvas
    behind this transparent stage), drift down from bird's eye, level out, and
    land at eye height on a street facing the collapsed building — then the
    phone rises and the capture happens. The master scrub feeds
@@ -110,7 +110,7 @@ export function ActGround() {
           <div className="gm-meta absolute left-5 top-24 sm:left-10 lg:left-16">
             <div className="inline-flex items-center gap-2.5 rounded-lg border border-line bg-white/92 px-3.5 py-2 font-mono text-[12px] font-semibold tracking-wide text-ink shadow-sm backdrop-blur">
               <span className="h-2 w-2 rounded-full bg-[#D12800]" />
-              Antakya · Hatay — 36.20°N 36.16°E · 04:17
+              Selmara · Vetra Province — Sector K4 · 04:17
             </div>
           </div>
 
@@ -156,7 +156,7 @@ export function ActGround() {
           <div className="gm-hud invisible absolute bottom-12 left-5 hidden rounded-xl bg-white/70 px-4 py-3 font-mono text-[12px] uppercase tracking-[0.18em] text-ink2 opacity-0 backdrop-blur-md sm:left-10 sm:block lg:left-16">
             <div className="flex items-center gap-3">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#D12800]" />
-              Descending · 36.20°N 36.16°E
+              Descending · Selmara Sector K4
             </div>
             <div className="mt-2 text-[20px] font-bold tabular-nums text-ink">
               <span ref={altRef}>Alt 700 m</span>

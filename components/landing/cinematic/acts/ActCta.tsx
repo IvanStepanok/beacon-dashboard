@@ -154,8 +154,8 @@ export function ActCta() {
             The redaction scenes use staged imagery; the face pixelation is the app&apos;s real
             on-device output, the plate blur is re-staged in the page. Phone and console
             scenes are HTML recreations of the shipping apps — the film&apos;s dashboard numbers
-            come from the 500k load-test scenario, not live data. The Antakya M 6.4
-            timeline is a training scenario.
+            come from the 500k load-test scenario, not live data. The M 6.4 timeline is a
+            training scenario: Selmara, its districts and its map are fictional.
           </div>
         </div>
       </footer>

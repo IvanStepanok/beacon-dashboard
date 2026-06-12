@@ -2,7 +2,7 @@
 
 /* The orbital act of the landing film: a stylized dotted Earth (GitHub-globe
    technique, UNDP palette), procedural cloud cover that thickens on scroll,
-   a pulsing beacon at Antakya, and a scroll-scrubbed camera that finally
+   a pulsing beacon at the crisis city, and a scroll-scrubbed camera that finally
    dives through the cloud deck. All scroll state arrives via orbitBridge —
    deterministic in `progress`, so scrubbing backwards replays perfectly;
    only ambient motion (cloud drift, pulse, satellite) runs on the clock.
@@ -23,7 +23,7 @@ import {
 } from "./shaders";
 import { CityStage } from "../city/CityScene";
 
-const ANTAKYA = { lat: 36.2, lng: 36.16 };
+const TARGET = { lat: 36.2, lng: 36.16 };
 const CAM_LNG = -20; // fixed camera azimuth; the globe rotates to meet it
 const SPIN = 0.5; // rad of eastward travel from hero framing to alignment
 
@@ -34,7 +34,7 @@ const smoothstep = (a: number, b: number, x: number) => {
 };
 const lerp = THREE.MathUtils.lerp;
 
-const camLat = (p: number) => lerp(14, ANTAKYA.lat, smoothstep(0.36, 0.6, p));
+const camLat = (p: number) => lerp(14, TARGET.lat, smoothstep(0.36, 0.6, p));
 /* Dive ends at r=1.18 — close enough for the arrival, far enough that the
    instanced dots stay dot-sized; the DOM flash owns everything past 0.82. */
 const camRadius = (p: number) => lerp(3.25, 1.18, smoothstep(0.52, 0.92, p));
@@ -168,7 +168,7 @@ function CloudSphere() {
 function DescentClouds() {
   const group = useRef<THREE.Group>(null!);
   const puffs = useMemo(() => {
-    const dir = latLngToVector3(ANTAKYA.lat, CAM_LNG, 1).normalize();
+    const dir = latLngToVector3(TARGET.lat, CAM_LNG, 1).normalize();
     const right = new THREE.Vector3(0, 1, 0).cross(dir).normalize();
     const up = dir.clone().cross(right).normalize();
     return Array.from({ length: 9 }, (_, i) => {
@@ -233,7 +233,7 @@ function Beacon() {
   const ringB = useRef<THREE.Mesh>(null!);
   const dotMat = useRef<THREE.MeshBasicMaterial>(null!);
   const beamMat = useRef<THREE.ShaderMaterial>(null!);
-  const pos = useMemo(() => latLngToVector3(ANTAKYA.lat, ANTAKYA.lng, 1.004), []);
+  const pos = useMemo(() => latLngToVector3(TARGET.lat, TARGET.lng, 1.004), []);
   const outward = useMemo(() => pos.clone().multiplyScalar(2), [pos]);
 
   useFrame(({ clock }) => {
@@ -356,7 +356,7 @@ function Stars() {
 function CameraRig({ globe }: { globe: React.RefObject<THREE.Group | null> }) {
   const smoothedPointer = useRef(new THREE.Vector2());
   const { alignYaw, camAzimuth } = useMemo(() => {
-    const m = latLngToVector3(ANTAKYA.lat, ANTAKYA.lng, 1);
+    const m = latLngToVector3(TARGET.lat, TARGET.lng, 1);
     const c = latLngToVector3(0, CAM_LNG, 1);
     /* Ry(α) maps azimuth β → β − α, so to bring the marker's azimuth onto the
        camera's: α = β_marker − β_camera. */
@@ -392,7 +392,7 @@ function CameraRig({ globe }: { globe: React.RefObject<THREE.Group | null> }) {
       owning.current = true;
     }
 
-    /* Globe yaw: eased journey from hero framing to Antakya-under-camera. */
+    /* Globe yaw: eased journey from hero framing to city-under-camera. */
     g.rotation.y = alignYaw + SPIN * (1 - alignAmount(p));
 
     /* Globe slides from the right split to center as the dive begins. */
@@ -400,7 +400,7 @@ function CameraRig({ globe }: { globe: React.RefObject<THREE.Group | null> }) {
     g.position.x = (wide ? 0.95 : 0) * (1 - smoothstep(0.34, 0.56, p));
     g.position.y = wide ? 0 : -0.25 * (1 - smoothstep(0.34, 0.56, p));
 
-    /* Camera: fixed azimuth, latitude rises to meet Antakya, radius dives. */
+    /* Camera: fixed azimuth, latitude rises to meet the target, radius dives. */
     const dir = tmpDir.current.copy(latLngToVector3(camLat(p), CAM_LNG, 1)).normalize();
     camera.position.copy(dir).multiplyScalar(camRadius(p));
 
@@ -467,7 +467,7 @@ function OrbitStage() {
   );
 }
 
-/* One canvas, two worlds: the globe (act I) and the Antakya maquette
+/* One canvas, two worlds: the globe (act I) and the Selmara maquette
    (act II). Stage visibility + camera ownership flip on the bridge; the
    handoff between them happens inside the cloud whiteout. */
 export default function OrbitScene() {

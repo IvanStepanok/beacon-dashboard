@@ -1,6 +1,6 @@
 "use client";
 
-/* ACT II's world: the Antakya maquette. A paper-model city — the ground is
+/* ACT II's world: the Selmara maquette. A paper-model city — the ground is
    the same cartography the orbit act's map promised, the buildings are
    instanced boxes with the damage gradient around the epicenter, and one
    hand-composed hero: the four-floor building with a pancaked wing, rubble,
@@ -88,9 +88,10 @@ function Ground() {
 
   return (
     <>
-      {/* paper to the horizon, under the fog */}
+      {/* paper to the horizon — its rim sits past fog.far and inside the
+         sky dome, so it fades out instead of cutting off */}
       <mesh rotation-x={-Math.PI / 2} position={[750, -0.2, 425]} receiveShadow>
-        <circleGeometry args={[5000, 48]} />
+        <circleGeometry args={[4600, 48]} />
         <meshLambertMaterial color="#EFE9DD" />
       </mesh>
       {/* the city map itself */}
@@ -393,15 +394,56 @@ function CityRig() {
 /* -------------------------------------------------------------- stage -- */
 
 /* Fog is a scene-level property — flip it with the act, never leave it on
-   for the orbit globe. */
+   for the orbit globe. Near/far tighten as the camera descends: thin aerial
+   haze from the cloud deck, a dense dust horizon at eye level — the far
+   blocks melt away instead of staying crisp to the maquette's edge. */
 function FogController() {
   const scene = useThree((s) => s.scene);
-  const fog = useMemo(() => new THREE.Fog("#EDE7DA", 950, 3100), []);
+  const fog = useMemo(() => new THREE.Fog("#EDE7DA", 700, 4200), []);
   useFrame(() => {
     const want = orbitBridge.cityOn ? fog : null;
     if (scene.fog !== want) scene.fog = want;
+    if (!orbitBridge.cityOn) return;
+    const k = smoothstep(0.18, 0.85, orbitBridge.city);
+    fog.near = lerp(700, 190, k);
+    fog.far = lerp(4200, 1450, k);
   });
   return null;
+}
+
+/* In-scene sky: a gradient dome whose horizon band is the exact fog color,
+   so fully-fogged geometry dissolves into it without a seam. The CSS sky
+   behind the canvas can't do that — its gradient lives in screen space
+   while the horizon line lives in world space. MeshBasicMaterial (not a
+   ShaderMaterial) so the texture runs through the same color-space and
+   tone-mapping chain as the fog it must match. */
+function SkyDome() {
+  const texture = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 2;
+    c.height = 256;
+    const ctx = c.getContext("2d")!;
+    const g = ctx.createLinearGradient(0, 0, 0, 256);
+    /* sphere UVs put canvas row 0 at the zenith, 0.5 at the horizon */
+    g.addColorStop(0, "#BFD6E8");
+    g.addColorStop(0.34, "#DCE7EF");
+    g.addColorStop(0.48, "#EDE7DA");
+    g.addColorStop(1, "#EDE7DA");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 2, 256);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return (
+    <mesh position={[750, 0, 425]}>
+      {/* the rig strays ~1000 from the dome centre; 4800 + 1000 stays inside
+         the camera's 6000 far plane so the far wall never clips */}
+      <sphereGeometry args={[4800, 32, 24]} />
+      <meshBasicMaterial map={texture} side={THREE.BackSide} fog={false} depthWrite={false} />
+    </mesh>
+  );
 }
 
 function Sun() {
@@ -438,6 +480,7 @@ export function CityStage() {
   return (
     <group ref={group} visible={false}>
       <FogController />
+      <SkyDome />
       <hemisphereLight args={["#EAF2F8", "#D9CFC0", 0.72]} />
       <Sun />
       <Ground />

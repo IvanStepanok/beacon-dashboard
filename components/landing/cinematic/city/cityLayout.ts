@@ -1,4 +1,5 @@
-/* One source of truth for the Antakya maquette: the ground-texture painter
+/* One source of truth for the Selmara maquette (a fictional quake-struck
+   coastal city): the ground-texture painter
    and the 3D building field both consume this layout, so the map you fly
    over IS the city you land in. All coordinates are meters; the city plane
    is 1500×850 with the same frame the old GroundMap SVG used (x east,
@@ -170,12 +171,14 @@ export const PARKS: [number, number, number, number][] = [
   [330, 210, 86, 52], [1180, 620, 96, 58], [760, 130, 64, 40], [1320, 250, 70, 44],
 ];
 
-export const LABELS: { x: number; z: number; text: string; size: number; italic?: boolean }[] = [
-  { x: 700, z: 300, text: "Antakya", size: 30 },
-  { x: 420, z: 180, text: "Odabaşı", size: 15, italic: true },
-  { x: 1120, z: 530, text: "Haraparası", size: 15, italic: true },
-  { x: 870, z: 480, text: "Ulucami", size: 14, italic: true },
-  { x: 250, z: 700, text: "Asi Nehri", size: 14, italic: true },
+/* Toponyms are deliberately fictional — the maquette quotes the geography of
+   a Mediterranean quake city without naming a real one. */
+export const LABELS: { x: number; z: number; text: string; size: number; italic?: boolean; water?: boolean }[] = [
+  { x: 700, z: 300, text: "Selmara", size: 30 },
+  { x: 420, z: 180, text: "Almena", size: 15, italic: true },
+  { x: 1120, z: 530, text: "Vessa", size: 15, italic: true },
+  { x: 870, z: 480, text: "Kolat", size: 14, italic: true },
+  { x: 250, z: 700, text: "Sera River", size: 14, italic: true, water: true },
 ];
 
 /* The camera's street, drawn explicitly so the landing spot is a real road. */

@@ -1,6 +1,6 @@
 /* Paints the city ground texture onto a canvas — the same cartography the
    old GroundMap SVG drew (warm paper, white streets on warm casings, the
-   Asi, parks, district labels), but consumed as a THREE texture under the
+   river, parks, district labels), but consumed as a THREE texture under the
    3D building field. Client-only (canvas API). */
 
 import {
@@ -123,7 +123,7 @@ export function paintCityTexture(): HTMLCanvasElement {
   ctx.fillStyle = "#8A909B";
   for (const l of LABELS) {
     ctx.font = `${l.italic ? "italic " : ""}${l.size > 20 ? 500 : 400} ${l.size}px "Noto Sans", sans-serif`;
-    ctx.fillStyle = l.text === "Asi Nehri" ? "#7BA6C2" : "#8A909B";
+    ctx.fillStyle = l.water ? "#7BA6C2" : "#8A909B";
     ctx.fillText(l.text, l.x, l.z);
   }
 
