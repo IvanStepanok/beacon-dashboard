@@ -20,6 +20,7 @@ import Lenis from "lenis";
 import { Globe, MonitorCheck, Radar } from "lucide-react";
 import { gsap, ScrollTrigger } from "./gsap";
 import { FilmVideo } from "./FilmVideo";
+import { onBridgeChange, orbitBridge } from "./bridge";
 import { ActOrbit } from "./acts/ActOrbit";
 import { ActGround } from "./acts/ActGround";
 import { ActOffline } from "./acts/ActOffline";
@@ -207,21 +208,31 @@ export default function CinematicLanding() {
        10). On broadband this is sub-second; a failsafe releases the page
        after 8 s no matter what so a flaky link can't trap anyone. */
     let unlocked = false;
+    const gateTimers: number[] = [];
+    const bootAt = performance.now();
     lenis.stop();
     /* lenis.stop() covers wheel/touch; overflow:hidden also blocks
-       keyboard and scrollbar scrolling while the gate is up */
+       keyboard and scrollbar scrolling while the curtain is up */
     document.documentElement.style.overflow = "hidden";
+    const release = () => {
+      document.documentElement.style.overflow = "";
+      lenis.start();
+      setFilmLoading(2); /* 2 = curtain fading out */
+      gateTimers.push(window.setTimeout(() => setFilmLoading(null), 560));
+    };
     const unlock = () => {
       if (unlocked) return;
       unlocked = true;
-      document.documentElement.style.overflow = "";
-      lenis.start();
-      setFilmLoading(null);
+      /* hold the brand curtain at least 700 ms — a sub-frame blink reads
+         worse than a beat of intentional loading */
+      gateTimers.push(window.setTimeout(release, Math.max(0, 700 - (performance.now() - bootAt))));
     };
-    const onBuffer = (e: Event) => {
-      if ((e as CustomEvent<{ ready: boolean }>).detail.ready) unlock();
-    };
-    window.addEventListener("beacon:film-buffer", onBuffer);
+    /* subscribe, then re-read: the film component mounts first and may
+       have flipped filmReady before this listener existed */
+    const offFilmReady = onBridgeChange(() => {
+      if (orbitBridge.filmReady) unlock();
+    });
+    if (orbitBridge.filmReady) unlock();
     const failsafe = window.setTimeout(unlock, 8000);
 
     /* ── state snapping ──────────────────────────────────────────────────
@@ -293,7 +304,9 @@ export default function CinematicLanding() {
     return () => {
       window.clearTimeout(snapTimer);
       window.clearTimeout(failsafe);
-      window.removeEventListener("beacon:film-buffer", onBuffer);
+      gateTimers.forEach((t) => window.clearTimeout(t));
+      document.documentElement.style.overflow = "";
+      offFilmReady();
       ScrollTrigger.removeEventListener("refresh", measure);
       gsap.ticker.remove(raf);
       lenis.destroy();
@@ -306,15 +319,26 @@ export default function CinematicLanding() {
   return (
     <div className="relative bg-white">
       <FilmVideo />
-      {/* film preload spinner — scroll is held until the descent is
-          buffered; fades in after 350 ms so fast connections never see it */}
+      {/* brand curtain — an opaque loading screen in the film's deep-space
+          tone, up from the very first SSR byte until the descent is
+          buffered (so the page can never look frozen-but-unscrollable),
+          then a 0.5 s fade reveals the hero */}
       {filmLoading !== null && (
         <div
           aria-hidden
-          className="fixed inset-0 z-50 grid place-items-center opacity-0"
-          style={{ animation: "beacon-fade-in 0.25s ease 0.35s forwards" }}
+          className={`fixed inset-0 z-[100] grid place-items-center bg-[#04090F] transition-opacity duration-500 ${
+            filmLoading === 2 ? "pointer-events-none opacity-0" : "opacity-100"
+          }`}
         >
-          <span className="h-10 w-10 animate-spin rounded-full border-[3px] border-white/25 border-t-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]" />
+          <div className="flex flex-col items-center gap-8">
+            <div className="flex items-center gap-3">
+              <span className="grid h-11 w-11 place-items-center rounded-xl bg-primary text-white">
+                <Radar size={23} strokeWidth={2.2} />
+              </span>
+              <span className="text-[22px] font-extrabold tracking-tight text-white">Beacon</span>
+            </div>
+            <span className="h-12 w-12 animate-spin rounded-full border-[3px] border-white/15 border-t-white" />
+          </div>
         </div>
       )}
       <FilmChrome lenisRef={lenisRef} />

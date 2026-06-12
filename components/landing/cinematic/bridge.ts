@@ -20,6 +20,8 @@ interface BridgeState {
   pointerY: number;
   orbitOn: boolean;
   cityOn: boolean;
+  /* the film has buffered enough to scrub the whole descent */
+  filmReady: boolean;
 }
 
 type Listener = () => void;
@@ -39,6 +41,7 @@ const bridge: BridgeGlobal = (globalStore.__beaconFilmBridge ??= {
     pointerY: 0,
     orbitOn: true,
     cityOn: false,
+    filmReady: false,
   },
   listeners: new Set<Listener>(),
 });
@@ -59,6 +62,15 @@ export function setActOn(act: "orbit" | "city", on: boolean) {
 
 export function canvasVisible() {
   return bridge.state.orbitOn || bridge.state.cityOn;
+}
+
+/* Mount order makes child effects fire before the landing shell's — state
+   lives here (re-readable after subscribing) instead of in fire-and-forget
+   DOM events, or a cached video can report ready before anyone listens. */
+export function setFilmReady() {
+  if (bridge.state.filmReady) return;
+  bridge.state.filmReady = true;
+  bridge.listeners.forEach((l) => l());
 }
 
 export function onBridgeChange(listener: Listener) {

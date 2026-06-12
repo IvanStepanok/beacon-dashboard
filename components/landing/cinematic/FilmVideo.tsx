@@ -14,7 +14,7 @@
    The DOM beats (copy cards, HUD, phone) stay in the acts, untouched. */
 
 import { useEffect, useRef, useState } from "react";
-import { orbitBridge, canvasVisible, onBridgeChange } from "./bridge";
+import { orbitBridge, canvasVisible, onBridgeChange, setFilmReady } from "./bridge";
 
 /* Video timeline anchors (seconds). The act boundary hides inside the cloud
    deck; the flight sails all the way to the film's final frame and FREEZES
@@ -47,38 +47,32 @@ export function FilmVideo() {
     return off;
   }, []);
 
-  /* Buffer telemetry for the scroll gate: the page locks scrolling until
+  /* Buffer telemetry for the scroll gate: the page holds scrolling until
      enough of the film is buffered to scrub through the whole descent
-     (orbit + flight ≈ the first 7 s). Broadcast as a DOM event so the
-     landing shell (which owns Lenis) can hold and release the page. */
+     (orbit + flight ≈ the first 7 s). Reported through the bridge — the
+     landing shell re-reads it after subscribing, immune to mount order. */
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     const READY_AT = 7;
-    let done = false;
     let iv = 0;
-    const emit = () => {
-      if (done) return;
+    const check = () => {
       const end = video.buffered.length ? video.buffered.end(video.buffered.length - 1) : 0;
       const dur = video.duration || 10;
       /* trust only real buffered seconds — Chrome reports readyState 4
          optimistically long before a seek into the tail would survive */
-      const ready = end >= Math.min(READY_AT, dur - 0.2);
-      if (ready) {
-        done = true;
+      if (end >= Math.min(READY_AT, dur - 0.2)) {
+        setFilmReady();
         window.clearInterval(iv);
       }
-      window.dispatchEvent(
-        new CustomEvent("beacon:film-buffer", { detail: { fraction: Math.min(end / dur, 1), ready } }),
-      );
     };
     const evs = ["progress", "loadedmetadata", "canplay", "canplaythrough"] as const;
-    evs.forEach((t) => video.addEventListener(t, emit));
+    evs.forEach((t) => video.addEventListener(t, check));
     /* Safari under-fires `progress` on fast links — poll as a backstop */
-    iv = window.setInterval(emit, 400);
-    emit();
+    iv = window.setInterval(check, 350);
+    check();
     return () => {
-      evs.forEach((t) => video.removeEventListener(t, emit));
+      evs.forEach((t) => video.removeEventListener(t, check));
       window.clearInterval(iv);
     };
   }, []);
