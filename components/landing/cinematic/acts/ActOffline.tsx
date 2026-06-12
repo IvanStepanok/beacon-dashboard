@@ -16,7 +16,7 @@ export function ActOffline() {
     () => {
       gsap.set([".of-copy-1", ".of-copy-2", ".of-copy-3"], { autoAlpha: 0, y: 42 });
       gsap.set(".of-scr-queue", { autoAlpha: 0 });
-      gsap.set(".of-pill", { autoAlpha: 0, x: 16 });
+      gsap.set(".of-pill", { autoAlpha: 0, xPercent: -100, x: 16 });
       gsap.set(".of-phone", { autoAlpha: 0, y: 60 });
 
       const tl = gsap.timeline({
@@ -107,19 +107,19 @@ export function ActOffline() {
           </div>
 
           {/* the phone — the only light on stage */}
-          <div className="of-phone absolute bottom-0 right-1/2 translate-x-1/2 lg:right-[8%] lg:translate-x-0">
+          <div className="of-phone absolute bottom-0 right-1/2 translate-x-1/2 lg:bottom-[var(--phone-lift,0px)] lg:right-[8%] lg:translate-x-0">
             <div className="relative origin-bottom scale-[0.55] sm:scale-75 lg:scale-[var(--phone-scale,1)]">
               <div style={{ filter: "drop-shadow(0 0 90px rgba(120,170,220,0.18))" }}>
                 <PhoneFrame>
-                  <div className="absolute inset-0">
+                  <div className="absolute inset-0 isolate">
                     <MapOfflineScreen />
                   </div>
-                  <div className="of-scr-queue invisible absolute inset-0 opacity-0">
+                  <div className="of-scr-queue invisible absolute inset-0 isolate opacity-0">
                     <SyncStatusScreen stage={0} />
                   </div>
                 </PhoneFrame>
               </div>
-              <div className="of-pill absolute -left-4 top-[30%] hidden -translate-x-full whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70 backdrop-blur lg:block">
+              <div className="of-pill absolute -left-4 top-[30%] hidden whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70 backdrop-blur lg:block">
                 map pack · 18 MB · cached 3 weeks ago
               </div>
             </div>

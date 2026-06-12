@@ -26,10 +26,10 @@ export function ActGround() {
       gsap.set(".gm-meta", { autoAlpha: 0, x: -14 });
       gsap.set([".gm-copy-1", ".gm-copy-2"], { autoAlpha: 0, y: 42 });
       gsap.set(".gm-hud", { autoAlpha: 0 });
-      gsap.set(".gm-phone", { yPercent: 180, rotateX: 16, transformPerspective: 1100, transformOrigin: "50% 100%" });
+      gsap.set(".gm-phone", { yPercent: 230, rotateX: 16, transformPerspective: 1100, transformOrigin: "50% 100%" });
       gsap.set([".gm-scr-ai", ".gm-scr-tier"], { autoAlpha: 0 });
       gsap.set(".gm-shutterflash", { opacity: 0 });
-      gsap.set([".gm-tap-1", ".gm-tap-2"], { autoAlpha: 0, y: 10 });
+      gsap.set([".gm-tap-1", ".gm-tap-2"], { autoAlpha: 0, y: 10, xPercent: -100 });
 
       /* Master scrub → city camera + altitude HUD. */
       const master = ScrollTrigger.create({
@@ -164,26 +164,26 @@ export function ActGround() {
           </div>
 
           {/* the phone, stage right */}
-          <div className="gm-phone absolute bottom-0 right-1/2 translate-x-1/2 lg:right-[8%] lg:translate-x-0">
+          <div className="gm-phone absolute bottom-0 right-1/2 translate-x-1/2 lg:bottom-[var(--phone-lift,0px)] lg:right-[8%] lg:translate-x-0">
             {/* pills live inside the scale wrapper so they track the visual
                 phone edge on any monitor, not the unscaled layout box */}
             <div className="relative origin-bottom scale-[0.55] sm:scale-75 lg:scale-[var(--phone-scale,1)]">
               <PhoneFrame>
-                <div className="gm-scr-aim absolute inset-0">
+                <div className="gm-scr-aim absolute inset-0 isolate">
                   <CameraScreen phase="aim" />
                 </div>
-                <div className="gm-scr-ai invisible absolute inset-0 opacity-0">
+                <div className="gm-scr-ai invisible absolute inset-0 isolate opacity-0">
                   <CameraScreen phase="ai" />
                 </div>
-                <div className="gm-scr-tier invisible absolute inset-0 opacity-0">
+                <div className="gm-scr-tier invisible absolute inset-0 isolate opacity-0">
                   <CaptureDamageScreen />
                 </div>
                 <div className="gm-shutterflash pointer-events-none absolute inset-0 z-30 bg-white opacity-0" />
               </PhoneFrame>
-              <div className="gm-tap-1 absolute -left-4 top-[38%] hidden -translate-x-full whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink2 shadow-sm lg:block">
+              <div className="gm-tap-1 absolute -left-4 top-[38%] hidden whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink2 shadow-sm lg:block">
                 first — the photo
               </div>
-              <div className="gm-tap-2 absolute -left-4 top-[38%] hidden -translate-x-full whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink2 shadow-sm lg:block">
+              <div className="gm-tap-2 absolute -left-4 top-[38%] hidden whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink2 shadow-sm lg:block">
                 then — confirm the tier
               </div>
             </div>

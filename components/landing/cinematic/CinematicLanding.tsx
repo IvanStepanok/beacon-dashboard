@@ -68,8 +68,12 @@ function useFluidStageScale(enabled: boolean) {
          viewport — otherwise it swallows the copy column on wide monitors */
       const cw = Math.min(w, 1500);
       const dash = Math.min(Math.max(Math.min((cw * 0.58) / 1280, (h * 0.74) / 840), 0.42), 0.72);
+      /* lift the bottom-anchored phones off the viewport floor on tall
+         screens — 38% of the free space, capped */
+      const lift = Math.min(Math.max(0, (h - 680 * phone) * 0.38), h * 0.12);
       root.style.setProperty("--phone-scale", phone.toFixed(3));
       root.style.setProperty("--dash-scale", dash.toFixed(3));
+      root.style.setProperty("--phone-lift", `${Math.round(lift)}px`);
     };
     apply();
     window.addEventListener("resize", apply);
@@ -77,6 +81,7 @@ function useFluidStageScale(enabled: boolean) {
       window.removeEventListener("resize", apply);
       root.style.removeProperty("--phone-scale");
       root.style.removeProperty("--dash-scale");
+      root.style.removeProperty("--phone-lift");
     };
   }, [enabled]);
 }

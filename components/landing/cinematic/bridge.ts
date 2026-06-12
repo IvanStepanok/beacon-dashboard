@@ -2,36 +2,68 @@
    scene reads it inside useFrame — values never pass through React state, so
    nothing re-renders at 120 Hz. Two acts drive the one fixed canvas: the
    orbit film (act I) and the city flight (act II); a tiny pub/sub tells the
-   canvas wrapper / frameloop gate when either enters or leaves the screen. */
-export const orbitBridge = {
+   canvas wrapper / frameloop gate when either enters or leaves the screen.
+
+   The state lives on globalThis: the canvas subtree loads through a dynamic
+   chunk, and dev-server HMR can end up instantiating this module twice —
+   acts writing to one copy while the scene reads another (symptom: stage
+   `visible` becomes undefined, and undefined !== false means THREE renders
+   the hidden stage). One shared singleton makes duplication harmless. */
+
+interface BridgeState {
   /* 0..1 across act I: hero hold → clouds → align → descent. */
-  progress: 0,
+  progress: number;
   /* 0..1 across act II: cloud entry → bird's eye → swoop → street level. */
-  city: 0,
+  city: number;
   /* Normalized pointer (-1..1) for parallax; eased inside the rigs. */
-  pointerX: 0,
-  pointerY: 0,
-  orbitOn: true,
-  cityOn: false,
-};
+  pointerX: number;
+  pointerY: number;
+  orbitOn: boolean;
+  cityOn: boolean;
+}
 
 type Listener = () => void;
-const listeners = new Set<Listener>();
+
+interface BridgeGlobal {
+  state: BridgeState;
+  listeners: Set<Listener>;
+}
+
+const globalStore = globalThis as unknown as { __beaconFilmBridge?: BridgeGlobal };
+
+const bridge: BridgeGlobal = (globalStore.__beaconFilmBridge ??= {
+  state: {
+    progress: 0,
+    city: 0,
+    pointerX: 0,
+    pointerY: 0,
+    orbitOn: true,
+    cityOn: false,
+  },
+  listeners: new Set<Listener>(),
+});
+
+export const orbitBridge = bridge.state;
 
 export function setActOn(act: "orbit" | "city", on: boolean) {
+  /* Coerce hard: ScrollTrigger.isActive can be undefined on a trigger that
+     has not refreshed yet (StrictMode's second mount hits this), and an
+     undefined stored here makes THREE render "hidden" stages — the renderer
+     only skips `visible === false`. */
+  const value = on === true;
   const key = act === "orbit" ? "orbitOn" : "cityOn";
-  if (orbitBridge[key] === on) return;
-  orbitBridge[key] = on;
-  listeners.forEach((l) => l());
+  if (bridge.state[key] === value) return;
+  bridge.state[key] = value;
+  bridge.listeners.forEach((l) => l());
 }
 
 export function canvasVisible() {
-  return orbitBridge.orbitOn || orbitBridge.cityOn;
+  return bridge.state.orbitOn || bridge.state.cityOn;
 }
 
 export function onBridgeChange(listener: Listener) {
-  listeners.add(listener);
+  bridge.listeners.add(listener);
   return () => {
-    listeners.delete(listener);
+    bridge.listeners.delete(listener);
   };
 }

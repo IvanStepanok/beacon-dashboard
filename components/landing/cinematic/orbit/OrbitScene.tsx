@@ -479,6 +479,11 @@ export default function OrbitScene() {
       camera={{ fov: 42, near: 0.01, far: 120, position: [0, 0.55, 3.25] }}
       gl={{ antialias: true, powerPreference: "high-performance", alpha: true }}
       style={{ background: "transparent" }}
+      onCreated={({ scene, camera }) => {
+        if (process.env.NODE_ENV === "development") {
+          (window as unknown as { __film?: unknown }).__film = { scene, camera };
+        }
+      }}
     >
       <OrbitStage />
       <CityStage />

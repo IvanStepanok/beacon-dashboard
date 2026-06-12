@@ -186,16 +186,16 @@ export function ActSync() {
           </div>
 
           {/* the phone, stage left */}
-          <div className="sy-phone absolute bottom-0 left-1/2 -translate-x-1/2 lg:left-[3%] lg:translate-x-0">
+          <div className="sy-phone absolute bottom-0 left-1/2 -translate-x-1/2 lg:bottom-[var(--phone-lift,0px)] lg:left-[3%] lg:translate-x-0">
             <div className="origin-bottom scale-[0.5] sm:scale-[0.7] lg:scale-[calc(var(--phone-scale,1)*0.8)]">
               <PhoneFrame>
-                <div className="absolute inset-0">
+                <div className="absolute inset-0 isolate">
                   <SyncStatusScreen stage={0} />
                 </div>
-                <div className="sy-scr-1 invisible absolute inset-0 opacity-0">
+                <div className="sy-scr-1 invisible absolute inset-0 isolate opacity-0">
                   <SyncStatusScreen stage={1} />
                 </div>
-                <div className="sy-scr-2 invisible absolute inset-0 opacity-0">
+                <div className="sy-scr-2 invisible absolute inset-0 isolate opacity-0">
                   <SyncStatusScreen stage={2} />
                 </div>
               </PhoneFrame>
