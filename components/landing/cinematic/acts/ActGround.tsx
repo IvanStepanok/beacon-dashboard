@@ -86,24 +86,25 @@ export function ActGround() {
         .to(".gm-copy-2", { autoAlpha: 1, y: 0, duration: 0.05 }, FLIGHT_END + 0.05)
         .to(".gm-tap-1", { autoAlpha: 1, y: 0, duration: 0.04 }, FLIGHT_END + 0.13)
         /* shutter: press, flash, and the AI layer is there when it clears */
-        .to(".gm-scr-aim .cam-shutter", { scale: 0.84, duration: 0.012, ease: "power1.in" }, 0.8)
-        .to(".gm-scr-aim .cam-shutter", { scale: 1, duration: 0.016, ease: "power1.out" }, 0.812)
-        .to(".gm-shutterflash", { opacity: 1, duration: 0.015, ease: "power1.in" }, 0.812)
-        .to(".gm-scr-ai", { autoAlpha: 1, duration: 0.001 }, 0.825)
-        .to(".gm-shutterflash", { opacity: 0, duration: 0.035, ease: "power2.out" }, 0.83)
+        .to(".gm-scr-aim .cam-shutter", { scale: 0.84, duration: 0.012, ease: "power1.in" }, 0.775)
+        .to(".gm-scr-aim .cam-shutter", { scale: 1, duration: 0.016, ease: "power1.out" }, 0.787)
+        .to(".gm-shutterflash", { opacity: 1, duration: 0.015, ease: "power1.in" }, 0.787)
+        .to(".gm-scr-ai", { autoAlpha: 1, duration: 0.001 }, 0.8)
+        .to(".gm-shutterflash", { opacity: 0, duration: 0.035, ease: "power2.out" }, 0.805)
         /* the verdict chip pops on its own beat */
         .fromTo(
           ".gm-scr-ai .cam-ai-chip",
           { autoAlpha: 0, y: 26 },
           { autoAlpha: 1, y: 0, duration: 0.04, ease: "power3.out" },
-          0.855,
+          0.81,
         )
-        /* hand over to the real damage-tier screen */
-        .to(".gm-scr-tier", { autoAlpha: 1, duration: 0.05 }, 0.92)
-        .to(".gm-tap-1", { autoAlpha: 0, y: -10, duration: 0.025 }, 0.92)
-        .to(".gm-tap-2", { autoAlpha: 1, y: 0, duration: 0.025 }, 0.945)
-        .to(".gm-hud", { autoAlpha: 0, duration: 0.03 }, 0.94)
-        .to(".gm-copy-2", { autoAlpha: 0, y: -42, duration: 0.04 }, 0.965)
+        /* hand over to the real damage-tier screen — early, so "confirm the
+           tier" holds the stage for the act's whole tail */
+        .to(".gm-scr-tier", { autoAlpha: 1, duration: 0.05 }, 0.865)
+        .to(".gm-tap-1", { autoAlpha: 0, y: -10, duration: 0.025 }, 0.865)
+        .to(".gm-tap-2", { autoAlpha: 1, y: 0, duration: 0.025 }, 0.89)
+        .to(".gm-hud", { autoAlpha: 0, duration: 0.03 }, 0.88)
+        .to(".gm-copy-2", { autoAlpha: 0, y: -42, duration: 0.04 }, 0.9)
         /* anchor: scrub maps scroll onto [0,1] exactly */
         .set({}, {}, 1);
     },
