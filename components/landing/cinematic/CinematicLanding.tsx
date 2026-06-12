@@ -208,16 +208,18 @@ export default function CinematicLanding() {
        after 8 s no matter what so a flaky link can't trap anyone. */
     let unlocked = false;
     lenis.stop();
+    /* lenis.stop() covers wheel/touch; overflow:hidden also blocks
+       keyboard and scrollbar scrolling while the gate is up */
+    document.documentElement.style.overflow = "hidden";
     const unlock = () => {
       if (unlocked) return;
       unlocked = true;
+      document.documentElement.style.overflow = "";
       lenis.start();
       setFilmLoading(null);
     };
     const onBuffer = (e: Event) => {
-      const { fraction, ready } = (e as CustomEvent<{ fraction: number; ready: boolean }>).detail;
-      if (ready) unlock();
-      else setFilmLoading((cur) => (cur === null ? null : fraction));
+      if ((e as CustomEvent<{ ready: boolean }>).detail.ready) unlock();
     };
     window.addEventListener("beacon:film-buffer", onBuffer);
     const failsafe = window.setTimeout(unlock, 8000);
@@ -304,11 +306,15 @@ export default function CinematicLanding() {
   return (
     <div className="relative bg-white">
       <FilmVideo />
-      {/* film preload pill — scroll is held until the descent is buffered */}
+      {/* film preload spinner — scroll is held until the descent is
+          buffered; fades in after 350 ms so fast connections never see it */}
       {filmLoading !== null && (
-        <div className="fixed bottom-8 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2.5 rounded-full border border-white/15 bg-[#04090F]/80 px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-white/85 backdrop-blur">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#FF5B3D]" />
-          Loading the film · {Math.round(filmLoading * 100)}%
+        <div
+          aria-hidden
+          className="fixed inset-0 z-50 grid place-items-center opacity-0"
+          style={{ animation: "beacon-fade-in 0.25s ease 0.35s forwards" }}
+        >
+          <span className="h-10 w-10 animate-spin rounded-full border-[3px] border-white/25 border-t-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.45)]" />
         </div>
       )}
       <FilmChrome lenisRef={lenisRef} />

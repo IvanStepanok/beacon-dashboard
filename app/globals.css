@@ -147,3 +147,11 @@ html.lenis, html.lenis body {
     margin: 14mm;
   }
 }
+
+/* film preload spinner (CinematicLanding) — delayed fade-in so fast
+   connections never see a flash of loader */
+@keyframes beacon-fade-in {
+  to {
+    opacity: 1;
+  }
+}
