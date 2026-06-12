@@ -19,8 +19,9 @@ import { latLngToVector3, buildLandDots } from "./geo";
 import { orbitBridge, canvasVisible, onBridgeChange } from "../bridge";
 import {
   ATMO_VERT, ATMO_FRAG, CLOUD_SPHERE_VERT, CLOUD_SPHERE_FRAG,
-  PUFF_VERT, PUFF_FRAG, BEAM_FRAG,
+  PUFF_VERT, BEAM_FRAG,
 } from "./shaders";
+import { getCloudTextures } from "../cloudTextures";
 import { CityStage } from "../city/CityScene";
 
 const ANTAKYA = { lat: 36.2, lng: 36.16 };
@@ -35,14 +36,14 @@ const smoothstep = (a: number, b: number, x: number) => {
 const lerp = THREE.MathUtils.lerp;
 
 const camLat = (p: number) => lerp(14, ANTAKYA.lat, smoothstep(0.36, 0.6, p));
-/* Dive ends at r=1.18 — close enough for the arrival, far enough that the
-   instanced dots stay dot-sized; the DOM flash owns everything past 0.82. */
-const camRadius = (p: number) => lerp(3.25, 1.18, smoothstep(0.52, 0.92, p));
+/* Dive ends at r=1.3 — the cloud wall owns everything past ~0.8, and the
+   dots must stay dot-sized until it has fully closed. */
+const camRadius = (p: number) => lerp(3.25, 1.3, smoothstep(0.52, 0.88, p));
 const alignAmount = (p: number) => smoothstep(0.18, 0.6, p);
 const cloudCover = (p: number) => lerp(0.34, 0.66, smoothstep(0.16, 0.4, p));
 const markerFade = (p: number) =>
   1 - 0.85 * smoothstep(0.2, 0.36, p) + 0.85 * smoothstep(0.52, 0.68, p);
-const descentCloudsIn = (p: number) => smoothstep(0.7, 0.86, p);
+const descentCloudsIn = (p: number) => smoothstep(0.66, 0.8, p);
 const satelliteFade = (p: number) => smoothstep(0.04, 0.1, p) * (1 - smoothstep(0.44, 0.56, p));
 
 /* ---------------------------------------------------------------- globe -- */
@@ -163,10 +164,12 @@ function CloudSphere() {
   );
 }
 
-/* Billboarded puffs along the final approach corridor — they rush past the
-   camera during the dive and sell the through-the-clouds moment. */
+/* Real cloud cutouts (CC0 photographic PNGs) billboarded along the final
+   approach corridor — they rush past the camera during the dive and sell
+   the through-the-clouds moment. */
 function DescentClouds() {
   const group = useRef<THREE.Group>(null!);
+  const textures = useMemo(() => getCloudTextures(), []);
   const puffs = useMemo(() => {
     const dir = latLngToVector3(ANTAKYA.lat, CAM_LNG, 1).normalize();
     const right = new THREE.Vector3(0, 1, 0).cross(dir).normalize();
@@ -182,42 +185,43 @@ function DescentClouds() {
         .multiplyScalar(radius)
         .addScaledVector(right, Math.cos(a) * spread)
         .addScaledVector(up, Math.sin(a) * spread * 0.6);
-      return { pos, seed: i * 7.31, scale: 0.6 + (i % 3) * 0.3 };
+      return {
+        pos,
+        scale: 0.6 + (i % 3) * 0.3,
+        tex: i % 5,
+        roll: (i * 1.7) % (Math.PI * 2),
+        flip: i % 2 === 0 ? 1 : -1,
+      };
     });
   }, []);
-  const mats = useRef<(THREE.ShaderMaterial | null)[]>([]);
+  const mats = useRef<(THREE.MeshBasicMaterial | null)[]>([]);
 
   useFrame(({ clock, camera }) => {
     const o = descentCloudsIn(orbitBridge.progress);
     group.current.visible = o > 0.001;
     group.current.children.forEach((child, i) => {
       child.lookAt(camera.position);
+      /* slow roll around the view axis keeps the deck alive */
+      child.rotateZ(puffs[i].roll + clock.elapsedTime * 0.02 * puffs[i].flip);
       const m = mats.current[i];
-      if (m) {
-        m.uniforms.uTime.value = clock.elapsedTime;
-        m.uniforms.uOpacity.value = o * 0.85;
-      }
+      if (m) m.opacity = o * 0.92;
     });
   });
 
   return (
     <group ref={group} renderOrder={5}>
       {puffs.map((p, i) => (
-        <mesh key={i} position={p.pos} scale={p.scale}>
-          <planeGeometry args={[1.3, 0.85]} />
-          <shaderMaterial
+        <mesh key={i} position={p.pos} scale={[p.scale * p.flip, p.scale, p.scale]}>
+          <planeGeometry args={[1.5, 1.0]} />
+          <meshBasicMaterial
             ref={(m) => {
               mats.current[i] = m;
             }}
-            vertexShader={PUFF_VERT}
-            fragmentShader={PUFF_FRAG}
-            uniforms={{
-              uTime: { value: 0 },
-              uOpacity: { value: 0 },
-              uSeed: { value: p.seed },
-            }}
+            map={textures[p.tex]}
             transparent
+            opacity={0}
             depthWrite={false}
+            toneMapped={false}
           />
         </mesh>
       ))}

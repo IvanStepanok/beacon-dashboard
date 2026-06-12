@@ -58,8 +58,8 @@ export function ActOrbit() {
         onUpdate: (self) => {
           orbitBridge.progress = self.progress;
           if (altRef.current) {
-            const r = gsap.utils.interpolate(3.25, 1.18, smoothstep(0.52, 0.92, self.progress));
-            const km = Math.max(56, Math.round(((r - 1) / 2.25) * 700));
+            const r = gsap.utils.interpolate(3.25, 1.3, smoothstep(0.52, 0.88, self.progress));
+            const km = Math.max(93, Math.round(((r - 1) / 2.25) * 700));
             altRef.current.textContent = km.toLocaleString("en-US");
           }
         },
@@ -84,6 +84,13 @@ export function ActOrbit() {
       gsap.set([".orb-beat-1", ".orb-beat-2"], { autoAlpha: 0, y: 48 });
       gsap.set(".orb-hud", { autoAlpha: 0 });
       gsap.set(".orb-flash", { opacity: 0 });
+      gsap.set(".orb-cloud", {
+        autoAlpha: 0,
+        scale: 0.55,
+        xPercent: (i: number) => [34, -38, 22, -28, 30][i],
+        yPercent: (i: number) => [26, 32, -30, -22, 24][i],
+        rotate: (i: number) => [8, -14, 5, -8, 12][i],
+      });
 
       tl.to(".orb-beat-0", { autoAlpha: 0, y: -48, duration: 0.05 }, 0.09)
         .to(".orb-beat-1", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.16)
@@ -91,10 +98,24 @@ export function ActOrbit() {
         .to(".orb-beat-2", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.37)
         .to(".orb-beat-2", { autoAlpha: 0, y: -48, duration: 0.05 }, 0.5)
         .to(".orb-hud", { autoAlpha: 1, duration: 0.03 }, 0.56)
-        .to(".orb-hud", { autoAlpha: 0, duration: 0.03 }, 0.8)
-        .to(".orb-flash", { opacity: 1, duration: 0.1, ease: "power1.in" }, 0.82)
-        /* hold the white through the act's end — the ground veil takes over */
-        .to(".orb-flash", { opacity: 1, duration: 0.06, ease: "none" }, 0.94)
+        .to(".orb-hud", { autoAlpha: 0, duration: 0.03 }, 0.76)
+        /* the cloud wall closes in (real CC0 cumulus cutouts)… */
+        .to(
+          ".orb-cloud",
+          {
+            autoAlpha: 1,
+            scale: 1.9,
+            xPercent: 0,
+            yPercent: 0,
+            duration: 0.13,
+            stagger: 0.012,
+            ease: "power1.in",
+          },
+          0.78,
+        )
+        /* …with the whiteout rising beneath it to guarantee full cover */
+        .to(".orb-flash", { opacity: 1, duration: 0.09, ease: "power1.in" }, 0.82)
+        .to(".orb-flash", { opacity: 1, duration: 0.09, ease: "none" }, 0.91)
         .set({}, {}, 1);
     },
     { scope: root },
@@ -184,7 +205,26 @@ export function ActOrbit() {
           </div>
         </div>
 
-        {/* through-the-clouds flash — hands off to the ground act */}
+        {/* the cloud wall — real cutouts converge as the dive ends */}
+        <div className="pointer-events-none absolute inset-0 z-30 overflow-hidden" aria-hidden>
+          {[
+            { src: "/landing/clouds/cloud-1.png", cls: "left-[-12vw] top-[12vh] w-[92vw]" },
+            { src: "/landing/clouds/cloud-2.png", cls: "right-[-16vw] top-[-12vh] w-[78vw]" },
+            { src: "/landing/clouds/cloud-3.png", cls: "bottom-[-16vh] left-[6vw] w-[98vw]" },
+            { src: "/landing/clouds/cloud-4.png", cls: "bottom-[2vh] right-[-8vw] w-[84vw]" },
+            { src: "/landing/clouds/cloud-5.png", cls: "left-[-6vw] top-[-8vh] w-[72vw]" },
+          ].map((c) => (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              key={c.src}
+              src={c.src}
+              alt=""
+              className={`orb-cloud invisible absolute max-w-none opacity-0 will-change-transform [filter:brightness(0.93)] ${c.cls}`}
+            />
+          ))}
+        </div>
+
+        {/* through-the-clouds whiteout under the cloud wall */}
         <div className="orb-flash pointer-events-none absolute inset-0 z-20 bg-white opacity-0" />
       </div>
     </section>

@@ -151,6 +151,8 @@ export function ActCta() {
           <div className="max-w-[60ch] text-[11px] leading-relaxed text-white/40">
             Photography: Chandler Cruttenden (Unsplash) · Serkan Gönültaş, Doruk Aksel Anıl,
             Mohammed Amine Jaddari (Pexels) — free licenses, with thanks.
+            Transition clouds: NASA Blue Marble / Tom Patterson cloud maps via
+            Wikimedia Commons (CC0).
             The redaction scenes use staged imagery; the face pixelation is the app&apos;s real
             on-device output, the plate blur is re-staged in the page. Phone and console
             scenes are HTML recreations of the shipping apps — the film&apos;s dashboard numbers
