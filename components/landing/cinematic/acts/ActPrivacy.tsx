@@ -109,9 +109,9 @@ export function ActPrivacy() {
           </div>
 
           {/* right: the evidence */}
-          <div className="relative h-[120vw] sm:h-[90vw] lg:h-[min(74vh,640px)]" aria-hidden>
+          <div className="relative h-[120vw] sm:h-[90vw] lg:h-[min(76vh,920px)]" aria-hidden>
             {/* card A — face */}
-            <div className="pv-cardA absolute right-0 top-0 w-[min(78%,440px)] overflow-hidden rounded-2xl shadow-[0_40px_90px_-30px_rgba(0,40,80,0.45)]">
+            <div className="pv-cardA absolute right-0 top-0 w-[min(78%,580px)] overflow-hidden rounded-2xl shadow-[0_40px_90px_-30px_rgba(0,40,80,0.45)]">
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/landing/privacy-before.jpg" alt="A resident photographing earthquake damage" className="block w-full" />
@@ -130,7 +130,7 @@ export function ActPrivacy() {
             </div>
 
             {/* card B — plate */}
-            <div className="pv-cardB absolute bottom-0 left-0 w-[min(62%,360px)] overflow-hidden rounded-2xl shadow-[0_40px_90px_-30px_rgba(0,40,80,0.45)]">
+            <div className="pv-cardB absolute bottom-0 left-0 w-[min(62%,460px)] overflow-hidden rounded-2xl shadow-[0_40px_90px_-30px_rgba(0,40,80,0.45)]">
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src="/landing/privacy-plate.jpg" alt="A car with a readable licence plate in front of damaged buildings" className="block w-full" />

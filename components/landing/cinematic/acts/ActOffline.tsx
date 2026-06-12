@@ -108,7 +108,7 @@ export function ActOffline() {
 
           {/* the phone — the only light on stage */}
           <div className="of-phone absolute bottom-0 right-1/2 translate-x-1/2 lg:right-[8%] lg:translate-x-0">
-            <div className="origin-bottom scale-[0.55] sm:scale-75 lg:scale-100">
+            <div className="relative origin-bottom scale-[0.55] sm:scale-75 lg:scale-[var(--phone-scale,1)]">
               <div style={{ filter: "drop-shadow(0 0 90px rgba(120,170,220,0.18))" }}>
                 <PhoneFrame>
                   <div className="absolute inset-0">
@@ -119,16 +119,16 @@ export function ActOffline() {
                   </div>
                 </PhoneFrame>
               </div>
-            </div>
-            <div className="of-pill absolute -left-2 top-[30%] hidden -translate-x-full whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70 backdrop-blur lg:block">
-              map pack · 18 MB · cached 3 weeks ago
+              <div className="of-pill absolute -left-4 top-[30%] hidden -translate-x-full whitespace-nowrap rounded-full border border-white/15 bg-white/5 px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-white/70 backdrop-blur lg:block">
+                map pack · 18 MB · cached 3 weeks ago
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* quiet ledger line — pays off when the outbox drains in act V */}
-        <div className="absolute bottom-12 left-5 hidden font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45 sm:left-10 lg:left-16 lg:block">
-          Outbox · 3 queued · 0 lost
+          {/* quiet ledger line — pays off when the outbox drains in act V */}
+          <div className="absolute bottom-12 left-5 hidden font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-white/45 sm:left-10 lg:left-16 lg:block">
+            Outbox · 3 queued · 0 lost
+          </div>
         </div>
 
         {/* power flicker overlay */}

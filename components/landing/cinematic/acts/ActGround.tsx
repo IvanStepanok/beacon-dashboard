@@ -26,7 +26,7 @@ export function ActGround() {
       gsap.set(".gm-meta", { autoAlpha: 0, x: -14 });
       gsap.set([".gm-copy-1", ".gm-copy-2"], { autoAlpha: 0, y: 42 });
       gsap.set(".gm-hud", { autoAlpha: 0 });
-      gsap.set(".gm-phone", { yPercent: 130, rotateX: 16, transformPerspective: 1100, transformOrigin: "50% 100%" });
+      gsap.set(".gm-phone", { yPercent: 180, rotateX: 16, transformPerspective: 1100, transformOrigin: "50% 100%" });
       gsap.set([".gm-scr-ai", ".gm-scr-tier"], { autoAlpha: 0 });
       gsap.set(".gm-shutterflash", { opacity: 0 });
       gsap.set([".gm-tap-1", ".gm-tap-2"], { autoAlpha: 0, y: 10 });
@@ -105,15 +105,15 @@ export function ActGround() {
     <section ref={root} id="act-ground" data-act data-header-theme="light" className="relative z-10" style={{ height: "600vh" }}>
       {/* the stage is transparent — the 3D maquette renders behind it */}
       <div className="sticky top-0 h-dvh overflow-hidden">
-        {/* meta strip */}
-        <div className="gm-meta absolute left-5 top-24 sm:left-10 lg:left-16">
-          <div className="inline-flex items-center gap-2.5 rounded-lg border border-line bg-white/92 px-3.5 py-2 font-mono text-[12px] font-semibold tracking-wide text-ink shadow-sm backdrop-blur">
-            <span className="h-2 w-2 rounded-full bg-[#D12800]" />
-            Antakya · Hatay — 36.20°N 36.16°E · 04:17
-          </div>
-        </div>
-
         <div className="relative mx-auto h-full max-w-[1400px] px-5 sm:px-10">
+          {/* meta strip — same column as the rest of the copy */}
+          <div className="gm-meta absolute left-5 top-24 sm:left-10 lg:left-16">
+            <div className="inline-flex items-center gap-2.5 rounded-lg border border-line bg-white/92 px-3.5 py-2 font-mono text-[12px] font-semibold tracking-wide text-ink shadow-sm backdrop-blur">
+              <span className="h-2 w-2 rounded-full bg-[#D12800]" />
+              Antakya · Hatay — 36.20°N 36.16°E · 04:17
+            </div>
+          </div>
+
           {/* copy beat 1 — bird's eye */}
           <div className="gm-copy-1 invisible absolute left-5 top-[30%] max-w-[520px] rounded-2xl bg-white/74 p-6 opacity-0 shadow-[0_18px_50px_-20px_rgba(20,40,60,0.35)] backdrop-blur-md sm:left-10 lg:left-16">
             <h2 className="text-[clamp(2rem,3.8vw,3.2rem)] font-extrabold leading-[1.07] tracking-[-0.02em] text-ink">
@@ -165,7 +165,9 @@ export function ActGround() {
 
           {/* the phone, stage right */}
           <div className="gm-phone absolute bottom-0 right-1/2 translate-x-1/2 lg:right-[8%] lg:translate-x-0">
-            <div className="origin-bottom scale-[0.55] sm:scale-75 lg:scale-100">
+            {/* pills live inside the scale wrapper so they track the visual
+                phone edge on any monitor, not the unscaled layout box */}
+            <div className="relative origin-bottom scale-[0.55] sm:scale-75 lg:scale-[var(--phone-scale,1)]">
               <PhoneFrame>
                 <div className="gm-scr-aim absolute inset-0">
                   <CameraScreen phase="aim" />
@@ -178,12 +180,12 @@ export function ActGround() {
                 </div>
                 <div className="gm-shutterflash pointer-events-none absolute inset-0 z-30 bg-white opacity-0" />
               </PhoneFrame>
-            </div>
-            <div className="gm-tap-1 absolute -left-2 top-[38%] hidden -translate-x-full whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink2 shadow-sm lg:block">
-              first — the photo
-            </div>
-            <div className="gm-tap-2 absolute -left-2 top-[38%] hidden -translate-x-full whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink2 shadow-sm lg:block">
-              then — confirm the tier
+              <div className="gm-tap-1 absolute -left-4 top-[38%] hidden -translate-x-full whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink2 shadow-sm lg:block">
+                first — the photo
+              </div>
+              <div className="gm-tap-2 absolute -left-4 top-[38%] hidden -translate-x-full whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-ink2 shadow-sm lg:block">
+                then — confirm the tier
+              </div>
             </div>
           </div>
         </div>

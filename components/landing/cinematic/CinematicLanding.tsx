@@ -14,7 +14,7 @@
    FilmChrome, a leaf component — so its setState never re-renders the
    acts or the procedural SVG city. */
 
-import { useEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import Link from "next/link";
 import Lenis from "lenis";
 import { Globe, MonitorCheck, Radar } from "lucide-react";
@@ -49,6 +49,36 @@ function useReducedMotion() {
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     () => false,
   );
+}
+
+/* The device mock and the console mock have fixed pixel stages (360×800 and
+   1280×800) — on a 4K monitor a hardcoded scale leaves them toy-sized, on a
+   small laptop they crowd the copy. Two CSS variables, set from the real
+   viewport, drive every lg+ scale wrapper instead. */
+function useFluidStageScale(enabled: boolean) {
+  useLayoutEffect(() => {
+    if (!enabled) return;
+    const root = document.documentElement;
+    const apply = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      /* phone: fill ~75% of the stage height, never comically large/small */
+      const phone = Math.min(Math.max(h / 880, 0.8), 1.6);
+      /* console: bounded by its act container (max-w 1500), not the raw
+         viewport — otherwise it swallows the copy column on wide monitors */
+      const cw = Math.min(w, 1500);
+      const dash = Math.min(Math.max(Math.min((cw * 0.58) / 1280, (h * 0.74) / 840), 0.42), 0.72);
+      root.style.setProperty("--phone-scale", phone.toFixed(3));
+      root.style.setProperty("--dash-scale", dash.toFixed(3));
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    return () => {
+      window.removeEventListener("resize", apply);
+      root.style.removeProperty("--phone-scale");
+      root.style.removeProperty("--dash-scale");
+    };
+  }, [enabled]);
 }
 
 /* Header + chapter rail. Isolated on purpose: its state flips at scroll
@@ -160,6 +190,7 @@ function FilmChrome({ lenisRef }: { lenisRef: RefObject<Lenis | null> }) {
 export default function CinematicLanding() {
   const reduced = useReducedMotion();
   const lenisRef = useRef<Lenis | null>(null);
+  useFluidStageScale(!reduced);
 
   /* Smooth-scroll substrate, single rAF via gsap.ticker. `anchors` keeps the
      hero's #act-ground CTA on the same eased ride as the chapter rail. */

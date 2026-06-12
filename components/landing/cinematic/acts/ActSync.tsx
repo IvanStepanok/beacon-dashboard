@@ -187,7 +187,7 @@ export function ActSync() {
 
           {/* the phone, stage left */}
           <div className="sy-phone absolute bottom-0 left-1/2 -translate-x-1/2 lg:left-[3%] lg:translate-x-0">
-            <div className="origin-bottom scale-[0.5] sm:scale-[0.7] lg:scale-[0.78]">
+            <div className="origin-bottom scale-[0.5] sm:scale-[0.7] lg:scale-[calc(var(--phone-scale,1)*0.8)]">
               <PhoneFrame>
                 <div className="absolute inset-0">
                   <SyncStatusScreen stage={0} />
@@ -227,7 +227,7 @@ export function ActSync() {
 
           {/* the analyst console */}
           <div className="sy-dash absolute right-0 top-[24%] origin-top-right lg:top-[18%]">
-            <div className="origin-top-right scale-[0.28] sm:scale-[0.45] lg:scale-[0.6] xl:scale-[0.68]">
+            <div className="origin-top-right scale-[0.28] sm:scale-[0.45] lg:scale-[var(--dash-scale,0.65)]">
               <DashboardMock />
             </div>
           </div>
