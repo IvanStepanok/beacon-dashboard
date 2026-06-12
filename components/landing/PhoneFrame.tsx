@@ -9,6 +9,7 @@ export function PhoneFrame({ children, scale = 0.8 }: { children: React.ReactNod
     <div
       className="relative mx-auto w-fit"
       style={{ filter: "drop-shadow(0 40px 80px rgba(0,110,181,0.25))" }}
+      aria-hidden
     >
       <div className="rounded-[2.8rem] bg-ink p-[10px]">
         <div

@@ -1,0 +1,559 @@
+"use client";
+
+/* The orbital act of the landing film: a stylized dotted Earth (GitHub-globe
+   technique, UNDP palette), procedural cloud cover that thickens on scroll,
+   a pulsing beacon at Antakya, and a scroll-scrubbed camera that finally
+   dives through the cloud deck. All scroll state arrives via orbitBridge —
+   deterministic in `progress`, so scrubbing backwards replays perfectly;
+   only ambient motion (cloud drift, pulse, satellite) runs on the clock.
+
+   eslint react-hooks v6 compiler rules are disabled here: useFrame callbacks
+   run in the R3F render loop, not during React render — mutating scene
+   objects there is the library's intended idiom, not a hook violation. */
+/* eslint-disable react-hooks/immutability, react-hooks/refs, react-hooks/purity */
+
+import { useMemo, useRef, useEffect } from "react";
+import * as THREE from "three";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { latLngToVector3, buildLandDots } from "./geo";
+import { orbitBridge, onOrbitVisible } from "../bridge";
+
+const ANTAKYA = { lat: 36.2, lng: 36.16 };
+const CAM_LNG = -20; // fixed camera azimuth; the globe rotates to meet it
+const SPIN = 0.5; // rad of eastward travel from hero framing to alignment
+
+/* ----- choreography curves (pure functions of master progress p) ----- */
+const smoothstep = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+const lerp = THREE.MathUtils.lerp;
+
+const camLat = (p: number) => lerp(14, ANTAKYA.lat, smoothstep(0.36, 0.6, p));
+/* Dive ends at r=1.18 — close enough for the arrival, far enough that the
+   instanced dots stay dot-sized; the DOM flash owns everything past 0.82. */
+const camRadius = (p: number) => lerp(3.25, 1.18, smoothstep(0.52, 0.92, p));
+const alignAmount = (p: number) => smoothstep(0.18, 0.6, p);
+const cloudCover = (p: number) => lerp(0.34, 0.66, smoothstep(0.16, 0.4, p));
+const markerFade = (p: number) =>
+  1 - 0.85 * smoothstep(0.2, 0.36, p) + 0.85 * smoothstep(0.52, 0.68, p);
+const descentCloudsIn = (p: number) => smoothstep(0.7, 0.86, p);
+const satelliteFade = (p: number) => smoothstep(0.04, 0.1, p) * (1 - smoothstep(0.44, 0.56, p));
+
+/* ---------------------------------------------------------------- globe -- */
+
+function LandDots() {
+  const ref = useRef<THREE.InstancedMesh>(null!);
+  const dots = useMemo(() => buildLandDots(), []);
+
+  useEffect(() => {
+    const dummy = new THREE.Object3D();
+    const color = new THREE.Color();
+    dots.forEach((d, i) => {
+      const p = latLngToVector3(d.lat, d.lng, 1.001);
+      dummy.position.copy(p);
+      dummy.lookAt(p.x * 2, p.y * 2, p.z * 2);
+      dummy.updateMatrix();
+      ref.current.setMatrixAt(i, dummy.matrix);
+      /* Two-tone speckle reads richer than a flat field. */
+      const bright = (Math.sin(d.lat * 12.9898 + d.lng * 78.233) + 1) / 2;
+      color.set(bright > 0.72 ? "#7CB8E8" : "#3B7CB8");
+      ref.current.setColorAt(i, color);
+    });
+    ref.current.instanceMatrix.needsUpdate = true;
+    if (ref.current.instanceColor) ref.current.instanceColor.needsUpdate = true;
+  }, [dots]);
+
+  return (
+    <instancedMesh ref={ref} args={[undefined, undefined, dots.length]} renderOrder={1}>
+      {/* 5 segments — GitHub's literal pentagon dots */}
+      <circleGeometry args={[0.0062, 5]} />
+      <meshBasicMaterial toneMapped={false} />
+    </instancedMesh>
+  );
+}
+
+const ATMO_VERT = /* glsl */ `
+  varying vec3 vNormal;
+  void main() {
+    vNormal = normalize(normalMatrix * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+const ATMO_FRAG = /* glsl */ `
+  uniform vec3 uColor;
+  uniform float uCoef;
+  uniform float uPower;
+  uniform float uOpacity;
+  varying vec3 vNormal;
+  void main() {
+    float intensity = pow(max(uCoef - dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0), uPower);
+    gl_FragColor = vec4(uColor, 1.0) * intensity * uOpacity;
+  }
+`;
+
+function Atmosphere() {
+  const uniforms = useMemo(
+    () => ({
+      uColor: { value: new THREE.Color("#3F8FD9") },
+      uCoef: { value: 0.72 },
+      uPower: { value: 5.0 },
+      uOpacity: { value: 1.0 },
+    }),
+    [],
+  );
+  return (
+    <mesh scale={1.16} renderOrder={4}>
+      <sphereGeometry args={[1, 48, 48]} />
+      <shaderMaterial
+        vertexShader={ATMO_VERT}
+        fragmentShader={ATMO_FRAG}
+        uniforms={uniforms}
+        side={THREE.BackSide}
+        transparent
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </mesh>
+  );
+}
+
+/* Subtle lit-edge fresnel on the globe itself, FrontSide. */
+function InnerRim() {
+  const uniforms = useMemo(
+    () => ({
+      uColor: { value: new THREE.Color("#2C70A8") },
+      uCoef: { value: 1.0 },
+      uPower: { value: 3.2 },
+      uOpacity: { value: 0.5 },
+    }),
+    [],
+  );
+  return (
+    <mesh scale={1.002} renderOrder={2}>
+      <sphereGeometry args={[1, 48, 48]} />
+      <shaderMaterial
+        vertexShader={ATMO_VERT}
+        fragmentShader={ATMO_FRAG}
+        uniforms={uniforms}
+        side={THREE.FrontSide}
+        transparent
+        depthWrite={false}
+        blending={THREE.AdditiveBlending}
+      />
+    </mesh>
+  );
+}
+
+/* ---------------------------------------------------------------- clouds -- */
+
+const NOISE_GLSL = /* glsl */ `
+  float hash(vec3 p) {
+    p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
+    p *= 17.0;
+    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+  }
+  float vnoise(vec3 x) {
+    vec3 i = floor(x);
+    vec3 f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(
+      mix(mix(hash(i + vec3(0.0, 0.0, 0.0)), hash(i + vec3(1.0, 0.0, 0.0)), f.x),
+          mix(hash(i + vec3(0.0, 1.0, 0.0)), hash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
+      mix(mix(hash(i + vec3(0.0, 0.0, 1.0)), hash(i + vec3(1.0, 0.0, 1.0)), f.x),
+          mix(hash(i + vec3(0.0, 1.0, 1.0)), hash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
+      f.z);
+  }
+  float fbm(vec3 p) {
+    float s = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 4; i++) {
+      s += a * vnoise(p);
+      p *= 2.17;
+      a *= 0.5;
+    }
+    return s;
+  }
+`;
+
+const CLOUD_SPHERE_FRAG = /* glsl */ `
+  uniform float uTime;
+  uniform float uCover;
+  uniform float uOpacity;
+  uniform vec3 uColor;
+  varying vec3 vPos;
+  ${NOISE_GLSL}
+  void main() {
+    vec3 dir = normalize(vPos);
+    float n = fbm(dir * 3.4 + vec3(uTime * 0.022, 0.0, uTime * 0.014));
+    float thresh = mix(0.62, 0.42, uCover);
+    float a = smoothstep(thresh, thresh + 0.26, n);
+    gl_FragColor = vec4(uColor, a * uOpacity);
+  }
+`;
+const CLOUD_SPHERE_VERT = /* glsl */ `
+  varying vec3 vPos;
+  void main() {
+    vPos = position;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+function CloudSphere() {
+  const mat = useRef<THREE.ShaderMaterial>(null!);
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uCover: { value: 0.3 },
+      uOpacity: { value: 0.55 },
+      uColor: { value: new THREE.Color("#C9DCEE") },
+    }),
+    [],
+  );
+  useFrame(({ clock }) => {
+    mat.current.uniforms.uTime.value = clock.elapsedTime;
+    mat.current.uniforms.uCover.value = cloudCover(orbitBridge.progress);
+  });
+  return (
+    <mesh scale={1.022} renderOrder={3}>
+      <sphereGeometry args={[1, 64, 64]} />
+      <shaderMaterial
+        ref={mat}
+        vertexShader={CLOUD_SPHERE_VERT}
+        fragmentShader={CLOUD_SPHERE_FRAG}
+        uniforms={uniforms}
+        transparent
+        depthWrite={false}
+      />
+    </mesh>
+  );
+}
+
+/* Billboarded puffs along the final approach corridor — they rush past the
+   camera during the dive and sell the through-the-clouds moment. */
+const PUFF_FRAG = /* glsl */ `
+  uniform float uTime;
+  uniform float uOpacity;
+  uniform float uSeed;
+  varying vec2 vUv;
+  ${NOISE_GLSL}
+  void main() {
+    float d = length(vUv - 0.5) * 2.0;
+    float mask = smoothstep(1.0, 0.3, d);
+    float n = fbm(vec3(vUv * 3.0 + uSeed, uTime * 0.05 + uSeed));
+    float a = mask * smoothstep(0.3, 0.72, n + mask * 0.3);
+    gl_FragColor = vec4(vec3(0.94, 0.97, 1.0), a * uOpacity);
+  }
+`;
+const PUFF_VERT = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+function DescentClouds() {
+  const group = useRef<THREE.Group>(null!);
+  const puffs = useMemo(() => {
+    const dir = latLngToVector3(ANTAKYA.lat, CAM_LNG, 1).normalize();
+    const right = new THREE.Vector3(0, 1, 0).cross(dir).normalize();
+    const up = dir.clone().cross(right).normalize();
+    return Array.from({ length: 9 }, (_, i) => {
+      const t = i / 8;
+      const radius = lerp(2.0, 1.12, t);
+      const a = i * 2.39996; // golden-angle scatter around the corridor
+      /* Keep a sight-line to the beacon: puffs hug the corridor's edges. */
+      const spread = 0.55 + 0.4 * t;
+      const pos = dir
+        .clone()
+        .multiplyScalar(radius)
+        .addScaledVector(right, Math.cos(a) * spread)
+        .addScaledVector(up, Math.sin(a) * spread * 0.6);
+      return { pos, seed: i * 7.31, scale: 0.6 + (i % 3) * 0.3 };
+    });
+  }, []);
+  const mats = useRef<(THREE.ShaderMaterial | null)[]>([]);
+
+  useFrame(({ clock, camera }) => {
+    const o = descentCloudsIn(orbitBridge.progress);
+    group.current.visible = o > 0.001;
+    group.current.children.forEach((child, i) => {
+      child.lookAt(camera.position);
+      const m = mats.current[i];
+      if (m) {
+        m.uniforms.uTime.value = clock.elapsedTime;
+        m.uniforms.uOpacity.value = o * 0.85;
+      }
+    });
+  });
+
+  return (
+    <group ref={group} renderOrder={5}>
+      {puffs.map((p, i) => (
+        <mesh key={i} position={p.pos} scale={p.scale}>
+          <planeGeometry args={[1.3, 0.85]} />
+          <shaderMaterial
+            ref={(m) => {
+              mats.current[i] = m;
+            }}
+            vertexShader={PUFF_VERT}
+            fragmentShader={PUFF_FRAG}
+            uniforms={{
+              uTime: { value: 0 },
+              uOpacity: { value: 0 },
+              uSeed: { value: p.seed },
+            }}
+            transparent
+            depthWrite={false}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+/* ---------------------------------------------------------------- marker -- */
+
+const BEAM_FRAG = /* glsl */ `
+  uniform float uOpacity;
+  varying vec2 vUv;
+  void main() {
+    float a = pow(1.0 - vUv.y, 2.2) * uOpacity;
+    vec3 c = mix(vec3(1.0, 0.45, 0.32), vec3(1.0, 0.84, 0.76), vUv.y);
+    gl_FragColor = vec4(c, a);
+  }
+`;
+
+function Beacon() {
+  const group = useRef<THREE.Group>(null!);
+  const ringA = useRef<THREE.Mesh>(null!);
+  const ringB = useRef<THREE.Mesh>(null!);
+  const dotMat = useRef<THREE.MeshBasicMaterial>(null!);
+  const beamMat = useRef<THREE.ShaderMaterial>(null!);
+  const pos = useMemo(() => latLngToVector3(ANTAKYA.lat, ANTAKYA.lng, 1.004), []);
+  const outward = useMemo(() => pos.clone().multiplyScalar(2), [pos]);
+
+  useFrame(({ clock }) => {
+    const fade = markerFade(orbitBridge.progress);
+    const t = clock.elapsedTime;
+    const pulse = (phase: number) => ((t * 0.45 + phase) % 1);
+    [ringA.current, ringB.current].forEach((ring, i) => {
+      const k = pulse(i * 0.5);
+      ring.scale.setScalar(1 + k * 2.6);
+      (ring.material as THREE.MeshBasicMaterial).opacity = (1 - k) * 0.8 * fade;
+    });
+    dotMat.current.opacity = fade;
+    beamMat.current.uniforms.uOpacity.value = (0.65 + 0.2 * Math.sin(t * 2.1)) * fade;
+  });
+
+  return (
+    <group ref={group} position={pos} onUpdate={(g) => g.lookAt(outward)}>
+      <mesh renderOrder={6}>
+        <circleGeometry args={[0.013, 24]} />
+        <meshBasicMaterial ref={dotMat} color="#FF5B3D" transparent toneMapped={false} />
+      </mesh>
+      {[ringA, ringB].map((r, i) => (
+        <mesh key={i} ref={r} renderOrder={6}>
+          <ringGeometry args={[0.014, 0.0165, 32]} />
+          <meshBasicMaterial color="#FF5B3D" transparent depthWrite={false} toneMapped={false} />
+        </mesh>
+      ))}
+      {/* The beacon itself — a thin light pillar rising from the crisis point. */}
+      <mesh rotation-x={Math.PI / 2} position-z={0.11} renderOrder={6}>
+        <cylinderGeometry args={[0.0045, 0.0085, 0.22, 8, 1, true]} />
+        <shaderMaterial
+          ref={beamMat}
+          vertexShader={PUFF_VERT}
+          fragmentShader={BEAM_FRAG}
+          uniforms={{ uOpacity: { value: 0.5 } }}
+          transparent
+          depthWrite={false}
+          side={THREE.DoubleSide}
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+/* ------------------------------------------------------------- satellite -- */
+
+function Satellite() {
+  const group = useRef<THREE.Group>(null!);
+  const inner = useRef<THREE.Group>(null!);
+  const mats = useRef<THREE.MeshBasicMaterial[]>([]);
+  const collect = (m: THREE.MeshBasicMaterial | null) => {
+    if (m && !mats.current.includes(m)) mats.current.push(m);
+  };
+
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    const fade = satelliteFade(orbitBridge.progress);
+    group.current.visible = fade > 0.001;
+    const a = t * 0.11;
+    inner.current.position.set(Math.cos(a) * 1.55, Math.sin(a * 0.9) * 0.42, Math.sin(a) * 1.55);
+    inner.current.rotation.y = -a;
+    mats.current.forEach((m) => {
+      m.opacity = fade;
+    });
+  });
+
+  return (
+    <group ref={group}>
+      <group ref={inner}>
+        <mesh>
+          <boxGeometry args={[0.028, 0.02, 0.02]} />
+          <meshBasicMaterial ref={collect} color="#B9CFE3" transparent toneMapped={false} />
+        </mesh>
+        {[-1, 1].map((s) => (
+          <mesh key={s} position={[s * 0.042, 0, 0]}>
+            <boxGeometry args={[0.05, 0.002, 0.022]} />
+            <meshBasicMaterial ref={collect} color="#39618C" transparent toneMapped={false} />
+          </mesh>
+        ))}
+      </group>
+      {/* faint orbit trace */}
+      <mesh rotation-x={Math.PI / 2.22}>
+        <torusGeometry args={[1.55, 0.0008, 6, 128]} />
+        <meshBasicMaterial ref={collect} color="#39618C" transparent opacity={0.4} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+/* ----------------------------------------------------------------- stars -- */
+
+function Stars() {
+  const geom = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    const n = 1600;
+    const pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const v = new THREE.Vector3()
+        .randomDirection()
+        .multiplyScalar(26 + Math.random() * 30);
+      pos.set([v.x, v.y, v.z], i * 3);
+    }
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    return g;
+  }, []);
+  const ref = useRef<THREE.Points>(null!);
+  useFrame((_, delta) => {
+    ref.current.rotation.y += delta * 0.004;
+  });
+  return (
+    <points ref={ref} geometry={geom}>
+      <pointsMaterial color="#9FB6CC" size={0.05} sizeAttenuation transparent opacity={0.8} />
+    </points>
+  );
+}
+
+/* ------------------------------------------------------------ camera rig -- */
+
+function CameraRig({ globe }: { globe: React.RefObject<THREE.Group | null> }) {
+  const smoothedPointer = useRef(new THREE.Vector2());
+  const { alignYaw, camAzimuth } = useMemo(() => {
+    const m = latLngToVector3(ANTAKYA.lat, ANTAKYA.lng, 1);
+    const c = latLngToVector3(0, CAM_LNG, 1);
+    /* Ry(α) maps azimuth β → β − α, so to bring the marker's azimuth onto the
+       camera's: α = β_marker − β_camera. */
+    return {
+      alignYaw: Math.atan2(m.z, m.x) - Math.atan2(c.z, c.x),
+      camAzimuth: 0,
+    };
+  }, []);
+  void camAzimuth;
+
+  const tmpDir = useRef(new THREE.Vector3());
+  const tmpRight = useRef(new THREE.Vector3());
+  const tmpUp = useRef(new THREE.Vector3());
+
+  useFrame(({ camera, viewport }, delta) => {
+    const p = orbitBridge.progress;
+    const g = globe.current;
+    if (!g) return;
+
+    /* Globe yaw: eased journey from hero framing to Antakya-under-camera. */
+    g.rotation.y = alignYaw + SPIN * (1 - alignAmount(p));
+
+    /* Globe slides from the right split to center as the dive begins. */
+    const wide = viewport.aspect > 1.05;
+    g.position.x = (wide ? 0.95 : 0) * (1 - smoothstep(0.34, 0.56, p));
+    g.position.y = wide ? 0 : -0.25 * (1 - smoothstep(0.34, 0.56, p));
+
+    /* Camera: fixed azimuth, latitude rises to meet Antakya, radius dives. */
+    const dir = tmpDir.current.copy(latLngToVector3(camLat(p), CAM_LNG, 1)).normalize();
+    camera.position.copy(dir).multiplyScalar(camRadius(p));
+
+    /* Hero-only pointer parallax, eased out before the dive. */
+    const damp = 1 - Math.pow(0.0015, delta);
+    smoothedPointer.current.x += (orbitBridge.pointerX - smoothedPointer.current.x) * damp;
+    smoothedPointer.current.y += (orbitBridge.pointerY - smoothedPointer.current.y) * damp;
+    const par = 1 - smoothstep(0.46, 0.6, p);
+    tmpRight.current.set(0, 1, 0).cross(dir).normalize();
+    tmpUp.current.copy(dir).cross(tmpRight.current).normalize();
+    camera.position
+      .addScaledVector(tmpRight.current, smoothedPointer.current.x * 0.09 * par)
+      .addScaledVector(tmpUp.current, smoothedPointer.current.y * -0.055 * par);
+
+    camera.lookAt(g.position);
+  });
+  return null;
+}
+
+/* Stop rendering entirely once the act has scrolled past. The scene mounts
+   lazily (dynamic ssr:false), so visibility may have already flipped before
+   we subscribe — apply the current bridge value first, then listen. */
+function FrameloopGate() {
+  const set = useThree((s) => s.set);
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    set({ frameloop: orbitBridge.visible ? "always" : "never" });
+    return onOrbitVisible((v) => {
+      set({ frameloop: v ? "always" : "never" });
+      if (v) invalidate();
+    });
+  }, [set, invalidate]);
+  return null;
+}
+
+/* ----------------------------------------------------------------- scene -- */
+
+function OrbitContents() {
+  const globe = useRef<THREE.Group>(null);
+  return (
+    <>
+      <Stars />
+      <group ref={globe}>
+        <mesh renderOrder={0}>
+          <sphereGeometry args={[0.9965, 64, 64]} />
+          <meshBasicMaterial color="#0B1E33" />
+        </mesh>
+        <LandDots />
+        <InnerRim />
+        <CloudSphere />
+        <Beacon />
+        <Atmosphere />
+      </group>
+      <Satellite />
+      <DescentClouds />
+      <CameraRig globe={globe} />
+      <FrameloopGate />
+    </>
+  );
+}
+
+export default function OrbitScene() {
+  return (
+    <Canvas
+      frameloop="always"
+      dpr={[1, 2]}
+      camera={{ fov: 42, near: 0.01, far: 120, position: [0, 0.55, 3.25] }}
+      gl={{ antialias: false, powerPreference: "high-performance", alpha: true }}
+      style={{ background: "transparent" }}
+    >
+      <OrbitContents />
+    </Canvas>
+  );
+}

@@ -11,7 +11,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
 
-  if (pathname === "/" || pathname === "/login" || pathname === "/public") return <>{children}</>;
+  if (pathname === "/" || pathname === "/classic" || pathname === "/login" || pathname === "/public") return <>{children}</>;
 
   if (loading) {
     return <div className="grid min-h-screen place-items-center text-ink3">Loading…</div>;

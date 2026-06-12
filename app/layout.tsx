@@ -11,7 +11,7 @@ import { AppShell } from "@/components/AppShell";
 const notoSans = Noto_Sans({
   variable: "--font-undp-sans",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const notoMono = Noto_Sans_Mono({

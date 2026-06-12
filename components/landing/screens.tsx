@@ -16,35 +16,43 @@ import {
 } from "lucide-react";
 
 /* BeaconColors — light theme, resolved hex (BeaconColors.kt). */
-const C = {
+export const C = {
   primary: "#006EB5", primarySoft: "#D7E9F9", primaryInk: "#1F5A95", onPrimary: "#FFFFFF",
   bg: "#FAFAFA", surface: "#FFFFFF", surface2: "#F7F7F7", surface3: "#EDEFF0",
   ink: "#232E3D", ink2: "#55606E", ink3: "#84929D", line: "#D4D6D8",
   ok: "#59BA47", okSoft: "#E7F6E4", warn: "#FBC412", warnSoft: "#FFF4D1",
   complete: "#D12800", completeSoft: "#FFE3DD",
 };
-type Tier = "minimal" | "partial" | "complete";
-const TIER_COLOR: Record<Tier, string> = { minimal: C.ok, partial: C.warn, complete: C.complete };
-const TIER_SOFT: Record<Tier, string> = { minimal: C.okSoft, partial: C.warnSoft, complete: C.completeSoft };
-const TIER_LABEL: Record<Tier, string> = {
+export type Tier = "minimal" | "partial" | "complete";
+export const TIER_COLOR: Record<Tier, string> = { minimal: C.ok, partial: C.warn, complete: C.complete };
+export const TIER_SOFT: Record<Tier, string> = { minimal: C.okSoft, partial: C.warnSoft, complete: C.completeSoft };
+export const TIER_LABEL: Record<Tier, string> = {
   minimal: "Minimal / no damage", partial: "Partially damaged", complete: "Completely destroyed",
 };
 
-/* Android status bar (28dp) — time left, signal/wifi/battery right. */
-function StatusBar() {
+/* Android status bar (28dp) — time left, signal/wifi/battery right.
+   `signal` lets the story kill connectivity: 3 = normal, 0 = blackout, 1 = first
+   bar back. With 0 bars the wifi glyph hides and a slash crosses the bars —
+   the blackout must read at a glance or the whole offline act lies. */
+export function StatusBar({ signal = 3, time = "11:25", light = false }: { signal?: 0 | 1 | 2 | 3; time?: string; light?: boolean }) {
   return (
-    <div className="relative z-20 flex h-[28px] items-center justify-between px-[24px]" style={{ color: C.ink }}>
-      <span className="text-[13px] font-medium tracking-wide">11:25</span>
+    <div className="relative z-20 flex h-[28px] items-center justify-between px-[24px]" style={{ color: light ? "#FFFFFF" : C.ink }}>
+      <span className="text-[13px] font-medium tracking-wide">{time}</span>
       <span className="flex items-center gap-[5px]">
         <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor" aria-hidden>
-          <rect x="0" y="7" width="2.6" height="4" rx="0.7" />
-          <rect x="4" y="4.5" width="2.6" height="6.5" rx="0.7" />
-          <rect x="8" y="2" width="2.6" height="9" rx="0.7" />
-          <rect x="12" y="0" width="2.6" height="11" rx="0.7" opacity="0.3" />
+          <rect x="0" y="7" width="2.6" height="4" rx="0.7" opacity={signal >= 1 ? 1 : 0.18} />
+          <rect x="4" y="4.5" width="2.6" height="6.5" rx="0.7" opacity={signal >= 2 ? 1 : 0.18} />
+          <rect x="8" y="2" width="2.6" height="9" rx="0.7" opacity={signal >= 3 ? 1 : 0.18} />
+          <rect x="12" y="0" width="2.6" height="11" rx="0.7" opacity="0.18" />
+          {signal === 0 && (
+            <path d="M 0.5 0.5 L 14.5 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          )}
         </svg>
-        <svg width="15" height="11" viewBox="0 0 16 12" fill="currentColor" aria-hidden>
-          <path d="M8 9.5a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2ZM4.9 7.6a4.6 4.6 0 0 1 6.2 0l-1.3 1.4a2.8 2.8 0 0 0-3.6 0L4.9 7.6ZM2.2 4.9a8.6 8.6 0 0 1 11.6 0l-1.3 1.3a6.8 6.8 0 0 0-9 0L2.2 4.9Z" />
-        </svg>
+        {signal >= 2 && (
+          <svg width="15" height="11" viewBox="0 0 16 12" fill="currentColor" aria-hidden>
+            <path d="M8 9.5a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2ZM4.9 7.6a4.6 4.6 0 0 1 6.2 0l-1.3 1.4a2.8 2.8 0 0 0-3.6 0L4.9 7.6ZM2.2 4.9a8.6 8.6 0 0 1 11.6 0l-1.3 1.3a6.8 6.8 0 0 0-9 0L2.2 4.9Z" />
+          </svg>
+        )}
         <svg width="22" height="11" viewBox="0 0 22 11" aria-hidden>
           <rect x="0.5" y="0.5" width="18" height="10" rx="2.5" fill="none" stroke="currentColor" opacity="0.5" />
           <rect x="2" y="2" width="13" height="7" rx="1.4" fill="currentColor" />
@@ -56,7 +64,7 @@ function StatusBar() {
 }
 
 /* BeaconBottomBar — Map · Reports · [+] · Profile, FAB raised 16dp. */
-function BottomNav({ active }: { active: "map" | "reports" | "profile" }) {
+export function BottomNav({ active }: { active: "map" | "reports" | "profile" }) {
   const tab = (key: "map" | "reports" | "profile", label: string, Icon: typeof MapIcon) => {
     const on = active === key;
     return (
@@ -93,7 +101,7 @@ function BottomNav({ active }: { active: "map" | "reports" | "profile" }) {
 
 /* OpenFreeMap Liberty-look basemap of Antakya: warm land, the Asi river,
    white roads with warm casings, building blocks, park blobs. */
-function Basemap({ height = 800 }: { height?: number }) {
+export function Basemap({ height = 800 }: { height?: number }) {
   return (
     <svg
       viewBox={`0 0 360 ${height}`} width="360" height={height} aria-hidden
