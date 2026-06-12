@@ -16,7 +16,12 @@ import { useMemo, useRef, useEffect } from "react";
 import * as THREE from "three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { latLngToVector3, buildLandDots } from "./geo";
-import { orbitBridge, onOrbitVisible } from "../bridge";
+import { orbitBridge, canvasVisible, onBridgeChange } from "../bridge";
+import {
+  ATMO_VERT, ATMO_FRAG, CLOUD_SPHERE_VERT, CLOUD_SPHERE_FRAG,
+  PUFF_VERT, PUFF_FRAG, BEAM_FRAG,
+} from "./shaders";
+import { CityStage } from "../city/CityScene";
 
 const ANTAKYA = { lat: 36.2, lng: 36.16 };
 const CAM_LNG = -20; // fixed camera azimuth; the globe rotates to meet it
@@ -73,25 +78,6 @@ function LandDots() {
   );
 }
 
-const ATMO_VERT = /* glsl */ `
-  varying vec3 vNormal;
-  void main() {
-    vNormal = normalize(normalMatrix * normal);
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-const ATMO_FRAG = /* glsl */ `
-  uniform vec3 uColor;
-  uniform float uCoef;
-  uniform float uPower;
-  uniform float uOpacity;
-  varying vec3 vNormal;
-  void main() {
-    float intensity = pow(max(uCoef - dot(vNormal, vec3(0.0, 0.0, 1.0)), 0.0), uPower);
-    gl_FragColor = vec4(uColor, 1.0) * intensity * uOpacity;
-  }
-`;
-
 function Atmosphere() {
   const uniforms = useMemo(
     () => ({
@@ -147,58 +133,6 @@ function InnerRim() {
 
 /* ---------------------------------------------------------------- clouds -- */
 
-const NOISE_GLSL = /* glsl */ `
-  float hash(vec3 p) {
-    p = fract(p * 0.3183099 + vec3(0.1, 0.2, 0.3));
-    p *= 17.0;
-    return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-  }
-  float vnoise(vec3 x) {
-    vec3 i = floor(x);
-    vec3 f = fract(x);
-    f = f * f * (3.0 - 2.0 * f);
-    return mix(
-      mix(mix(hash(i + vec3(0.0, 0.0, 0.0)), hash(i + vec3(1.0, 0.0, 0.0)), f.x),
-          mix(hash(i + vec3(0.0, 1.0, 0.0)), hash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y),
-      mix(mix(hash(i + vec3(0.0, 0.0, 1.0)), hash(i + vec3(1.0, 0.0, 1.0)), f.x),
-          mix(hash(i + vec3(0.0, 1.0, 1.0)), hash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y),
-      f.z);
-  }
-  float fbm(vec3 p) {
-    float s = 0.0;
-    float a = 0.5;
-    for (int i = 0; i < 4; i++) {
-      s += a * vnoise(p);
-      p *= 2.17;
-      a *= 0.5;
-    }
-    return s;
-  }
-`;
-
-const CLOUD_SPHERE_FRAG = /* glsl */ `
-  uniform float uTime;
-  uniform float uCover;
-  uniform float uOpacity;
-  uniform vec3 uColor;
-  varying vec3 vPos;
-  ${NOISE_GLSL}
-  void main() {
-    vec3 dir = normalize(vPos);
-    float n = fbm(dir * 3.4 + vec3(uTime * 0.022, 0.0, uTime * 0.014));
-    float thresh = mix(0.62, 0.42, uCover);
-    float a = smoothstep(thresh, thresh + 0.26, n);
-    gl_FragColor = vec4(uColor, a * uOpacity);
-  }
-`;
-const CLOUD_SPHERE_VERT = /* glsl */ `
-  varying vec3 vPos;
-  void main() {
-    vPos = position;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
 function CloudSphere() {
   const mat = useRef<THREE.ShaderMaterial>(null!);
   const uniforms = useMemo(
@@ -231,28 +165,6 @@ function CloudSphere() {
 
 /* Billboarded puffs along the final approach corridor — they rush past the
    camera during the dive and sell the through-the-clouds moment. */
-const PUFF_FRAG = /* glsl */ `
-  uniform float uTime;
-  uniform float uOpacity;
-  uniform float uSeed;
-  varying vec2 vUv;
-  ${NOISE_GLSL}
-  void main() {
-    float d = length(vUv - 0.5) * 2.0;
-    float mask = smoothstep(1.0, 0.3, d);
-    float n = fbm(vec3(vUv * 3.0 + uSeed, uTime * 0.05 + uSeed));
-    float a = mask * smoothstep(0.3, 0.72, n + mask * 0.3);
-    gl_FragColor = vec4(vec3(0.94, 0.97, 1.0), a * uOpacity);
-  }
-`;
-const PUFF_VERT = /* glsl */ `
-  varying vec2 vUv;
-  void main() {
-    vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`;
-
 function DescentClouds() {
   const group = useRef<THREE.Group>(null!);
   const puffs = useMemo(() => {
@@ -314,16 +226,6 @@ function DescentClouds() {
 }
 
 /* ---------------------------------------------------------------- marker -- */
-
-const BEAM_FRAG = /* glsl */ `
-  uniform float uOpacity;
-  varying vec2 vUv;
-  void main() {
-    float a = pow(1.0 - vUv.y, 2.2) * uOpacity;
-    vec3 c = mix(vec3(1.0, 0.45, 0.32), vec3(1.0, 0.84, 0.76), vUv.y);
-    gl_FragColor = vec4(c, a);
-  }
-`;
 
 function Beacon() {
   const group = useRef<THREE.Group>(null!);
@@ -469,10 +371,26 @@ function CameraRig({ globe }: { globe: React.RefObject<THREE.Group | null> }) {
   const tmpRight = useRef(new THREE.Vector3());
   const tmpUp = useRef(new THREE.Vector3());
 
+  const owning = useRef(false);
+
   useFrame(({ camera, viewport }, delta) => {
+    /* The city rig owns the camera during act II. */
+    if (orbitBridge.cityOn) {
+      owning.current = false;
+      return;
+    }
     const p = orbitBridge.progress;
     const g = globe.current;
     if (!g) return;
+
+    const cam = camera as THREE.PerspectiveCamera;
+    if (!owning.current) {
+      cam.near = 0.01;
+      cam.far = 120;
+      cam.fov = 42;
+      cam.updateProjectionMatrix();
+      owning.current = true;
+    }
 
     /* Globe yaw: eased journey from hero framing to Antakya-under-camera. */
     g.rotation.y = alignYaw + SPIN * (1 - alignAmount(p));
@@ -502,28 +420,34 @@ function CameraRig({ globe }: { globe: React.RefObject<THREE.Group | null> }) {
   return null;
 }
 
-/* Stop rendering entirely once the act has scrolled past. The scene mounts
-   lazily (dynamic ssr:false), so visibility may have already flipped before
-   we subscribe — apply the current bridge value first, then listen. */
+/* Stop rendering entirely once both film acts have scrolled past. The scene
+   mounts lazily (dynamic ssr:false), so visibility may have already flipped
+   before we subscribe — apply the current bridge value first, then listen. */
 function FrameloopGate() {
   const set = useThree((s) => s.set);
   const invalidate = useThree((s) => s.invalidate);
   useEffect(() => {
-    set({ frameloop: orbitBridge.visible ? "always" : "never" });
-    return onOrbitVisible((v) => {
+    const apply = () => {
+      const v = canvasVisible();
       set({ frameloop: v ? "always" : "never" });
       if (v) invalidate();
-    });
+    };
+    apply();
+    return onBridgeChange(apply);
   }, [set, invalidate]);
   return null;
 }
 
 /* ----------------------------------------------------------------- scene -- */
 
-function OrbitContents() {
+function OrbitStage() {
+  const root = useRef<THREE.Group>(null!);
   const globe = useRef<THREE.Group>(null);
+  useFrame(() => {
+    root.current.visible = orbitBridge.orbitOn;
+  });
   return (
-    <>
+    <group ref={root}>
       <Stars />
       <group ref={globe}>
         <mesh renderOrder={0}>
@@ -539,21 +463,26 @@ function OrbitContents() {
       <Satellite />
       <DescentClouds />
       <CameraRig globe={globe} />
-      <FrameloopGate />
-    </>
+    </group>
   );
 }
 
+/* One canvas, two worlds: the globe (act I) and the Antakya maquette
+   (act II). Stage visibility + camera ownership flip on the bridge; the
+   handoff between them happens inside the cloud whiteout. */
 export default function OrbitScene() {
   return (
     <Canvas
       frameloop="always"
+      shadows
       dpr={[1, 2]}
       camera={{ fov: 42, near: 0.01, far: 120, position: [0, 0.55, 3.25] }}
-      gl={{ antialias: false, powerPreference: "high-performance", alpha: true }}
+      gl={{ antialias: true, powerPreference: "high-performance", alpha: true }}
       style={{ background: "transparent" }}
     >
-      <OrbitContents />
+      <OrbitStage />
+      <CityStage />
+      <FrameloopGate />
     </Canvas>
   );
 }

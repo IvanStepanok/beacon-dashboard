@@ -126,23 +126,6 @@ body {
 
 /* ---------- Cinematic landing ---------- */
 
-/* The ground act reuses the phone's Basemap SVG full-bleed. */
-.cl-fillsvg svg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-/* Crisis-pin ripple on the ground map. */
-@keyframes cl-ripple {
-  0% { transform: scale(0.6); opacity: 0.9; }
-  80%, 100% { transform: scale(2.6); opacity: 0; }
-}
-.cl-ripple {
-  animation: cl-ripple 2.2s cubic-bezier(0, 0, 0.2, 1) infinite;
-}
-
 /* Lenis recommended base styles. */
 html.lenis, html.lenis body {
   height: auto;
@@ -151,11 +134,6 @@ html.lenis, html.lenis body {
   scroll-behavior: auto !important;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .cl-ripple {
-    animation: none;
-  }
-}
 
 /* Print (Overview's "Print situation brief" → browser Save-as-PDF): the app
    chrome hides itself via print:hidden — here we just force a clean white

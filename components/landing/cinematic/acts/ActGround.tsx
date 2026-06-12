@@ -1,74 +1,100 @@
 "use client";
 
-/* ACT II — GROUND. 420vh. We break through the cloud deck onto the paper map
-   (the same Basemap the real app renders), the crisis pin drops, and the
-   phone rises into frame: viewfinder → shutter → on-device AI verdict →
-   the real damage-tier screen. */
+/* ACT II — THE FLIGHT. 600vh. One continuous shot: we punch out of the cloud
+   deck above the Antakya maquette (the 3D city lives in the fixed canvas
+   behind this transparent stage), drift down from bird's eye, level out, and
+   land at eye height on a street facing the collapsed building — then the
+   phone rises and the capture happens. The master scrub feeds
+   orbitBridge.city; the same trigger drives the DOM beats, so the WebGL
+   camera and the copy can never drift apart. The altitude HUD continues the
+   orbit act's readout: kilometres up there, metres down here. */
 
 import { useRef } from "react";
-import { gsap, useGSAP } from "../gsap";
+import { gsap, ScrollTrigger, useGSAP } from "../gsap";
 import { PhoneFrame } from "../../PhoneFrame";
 import { CaptureDamageScreen } from "../../screens";
 import { CameraScreen } from "../screens-extra";
-import { GroundMap } from "../GroundMap";
+import { orbitBridge, setActOn } from "../bridge";
+import { camAltitudeAt, flightU, FLIGHT_END } from "../city/cityLayout";
 
 export function ActGround() {
   const root = useRef<HTMLElement>(null);
+  const altRef = useRef<HTMLSpanElement>(null);
 
   useGSAP(
     () => {
-      gsap.set(".gm-pin-wrap", { autoAlpha: 0, y: -56 });
       gsap.set(".gm-meta", { autoAlpha: 0, x: -14 });
       gsap.set([".gm-copy-1", ".gm-copy-2"], { autoAlpha: 0, y: 42 });
+      gsap.set(".gm-hud", { autoAlpha: 0 });
       gsap.set(".gm-phone", { yPercent: 130, rotateX: 16, transformPerspective: 1100, transformOrigin: "50% 100%" });
       gsap.set([".gm-scr-ai", ".gm-scr-tier"], { autoAlpha: 0 });
       gsap.set(".gm-shutterflash", { opacity: 0 });
       gsap.set([".gm-tap-1", ".gm-tap-2"], { autoAlpha: 0, y: 10 });
 
+      /* Master scrub → city camera + altitude HUD. */
+      const master = ScrollTrigger.create({
+        trigger: root.current,
+        start: "top top",
+        end: "bottom bottom",
+        scrub: true,
+        onUpdate: (self) => {
+          orbitBridge.city = self.progress;
+          if (altRef.current) {
+            const alt = camAltitudeAt(flightU(self.progress));
+            altRef.current.textContent =
+              alt > 60
+                ? `Alt ${Math.round(alt).toLocaleString("en-US")} m`
+                : alt > 2.2
+                  ? `Alt ${alt.toFixed(0)} m`
+                  : "Eye level · 1.7 m";
+          }
+        },
+        onToggle: (self) => setActOn("city", self.isActive),
+      });
+      setActOn("city", master.isActive);
+
+      /* DOM beats on the same scroll axis (slight lag for weight). */
       const tl = gsap.timeline({
         defaults: { ease: "none" },
         scrollTrigger: {
           trigger: root.current,
           start: "top top",
           end: "bottom bottom",
-          scrub: 0.9,
+          scrub: 0.7,
         },
       });
 
       tl
-        /* arrival: white veil clears, map settles out of the dive */
-        .fromTo(".gm-veil", { opacity: 1 }, { opacity: 0, duration: 0.09, ease: "power1.out" }, 0)
-        .fromTo(".gm-map", { scale: 2.7 }, { scale: 1.06, duration: 0.62, ease: "power2.out" }, 0)
-        /* the crisis pin + meta strip */
-        .to(".gm-pin-wrap", { autoAlpha: 1, y: 0, duration: 0.05, ease: "power3.out" }, 0.07)
-        .to(".gm-meta", { autoAlpha: 1, x: 0, duration: 0.05 }, 0.1)
-        /* copy beat 1 */
-        .to(".gm-copy-1", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.13)
-        .to(".gm-copy-1", { autoAlpha: 0, y: -42, duration: 0.05 }, 0.27)
-        /* the phone rises */
-        .to(".gm-phone", { yPercent: 0, rotateX: 0, duration: 0.14, ease: "power2.out" }, 0.24)
-        .to(".gm-copy-2", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.34)
-        .to(".gm-tap-1", { autoAlpha: 1, y: 0, duration: 0.04 }, 0.38)
+        /* out of the whiteout */
+        .fromTo(".gm-veil", { opacity: 1 }, { opacity: 0, duration: 0.06, ease: "power1.out" }, 0)
+        .to(".gm-meta", { autoAlpha: 1, x: 0, duration: 0.04 }, 0.07)
+        .to(".gm-hud", { autoAlpha: 1, duration: 0.03 }, 0.07)
+        /* bird's eye copy */
+        .to(".gm-copy-1", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.16)
+        .to(".gm-copy-1", { autoAlpha: 0, y: -42, duration: 0.05 }, 0.42)
+        /* street arrival: the phone comes out */
+        .to(".gm-phone", { yPercent: 0, rotateX: 0, duration: 0.1, ease: "power2.out" }, FLIGHT_END + 0.02)
+        .to(".gm-copy-2", { autoAlpha: 1, y: 0, duration: 0.05 }, FLIGHT_END + 0.05)
+        .to(".gm-tap-1", { autoAlpha: 1, y: 0, duration: 0.04 }, FLIGHT_END + 0.13)
         /* shutter: press, flash, and the AI layer is there when it clears */
-        .to(".gm-scr-aim .cam-shutter", { scale: 0.84, duration: 0.015, ease: "power1.in" }, 0.44)
-        .to(".gm-scr-aim .cam-shutter", { scale: 1, duration: 0.02, ease: "power1.out" }, 0.455)
-        .to(".gm-shutterflash", { opacity: 1, duration: 0.018, ease: "power1.in" }, 0.455)
-        .to(".gm-scr-ai", { autoAlpha: 1, duration: 0.001 }, 0.47)
-        .to(".gm-shutterflash", { opacity: 0, duration: 0.04, ease: "power2.out" }, 0.475)
+        .to(".gm-scr-aim .cam-shutter", { scale: 0.84, duration: 0.012, ease: "power1.in" }, 0.8)
+        .to(".gm-scr-aim .cam-shutter", { scale: 1, duration: 0.016, ease: "power1.out" }, 0.812)
+        .to(".gm-shutterflash", { opacity: 1, duration: 0.015, ease: "power1.in" }, 0.812)
+        .to(".gm-scr-ai", { autoAlpha: 1, duration: 0.001 }, 0.825)
+        .to(".gm-shutterflash", { opacity: 0, duration: 0.035, ease: "power2.out" }, 0.83)
         /* the verdict chip pops on its own beat */
         .fromTo(
           ".gm-scr-ai .cam-ai-chip",
           { autoAlpha: 0, y: 26 },
-          { autoAlpha: 1, y: 0, duration: 0.05, ease: "power3.out" },
-          0.5,
+          { autoAlpha: 1, y: 0, duration: 0.04, ease: "power3.out" },
+          0.855,
         )
         /* hand over to the real damage-tier screen */
-        .to(".gm-scr-tier", { autoAlpha: 1, duration: 0.06 }, 0.62)
-        .to(".gm-tap-1", { autoAlpha: 0, y: -10, duration: 0.03 }, 0.62)
-        .to(".gm-tap-2", { autoAlpha: 1, y: 0, duration: 0.03 }, 0.65)
-        /* slow parallax hold to the act's end */
-        .to(".gm-map", { scale: 1.0, duration: 0.3 }, 0.7)
-        .to(".gm-copy-2", { autoAlpha: 0, y: -42, duration: 0.06 }, 0.92)
+        .to(".gm-scr-tier", { autoAlpha: 1, duration: 0.05 }, 0.92)
+        .to(".gm-tap-1", { autoAlpha: 0, y: -10, duration: 0.025 }, 0.92)
+        .to(".gm-tap-2", { autoAlpha: 1, y: 0, duration: 0.025 }, 0.945)
+        .to(".gm-hud", { autoAlpha: 0, duration: 0.03 }, 0.94)
+        .to(".gm-copy-2", { autoAlpha: 0, y: -42, duration: 0.04 }, 0.965)
         /* anchor: scrub maps scroll onto [0,1] exactly */
         .set({}, {}, 1);
     },
@@ -76,23 +102,9 @@ export function ActGround() {
   );
 
   return (
-    <section ref={root} id="act-ground" data-act data-header-theme="light" className="relative z-10 bg-white" style={{ height: "420vh" }}>
-      <div className="sticky top-0 h-dvh overflow-hidden" style={{ background: "#F4F1EA" }}>
-        {/* full-bleed city map — same cartographic language as the app */}
-        {/* transform-origin = the epicenter, so the dive lands on the pin */}
-        <div className="gm-map cl-fillsvg absolute inset-0 will-change-transform" style={{ transformOrigin: "63% 44%" }}>
-          <GroundMap />
-        </div>
-
-        {/* crisis pin at the map's heart */}
-        <div className="gm-pin-wrap absolute left-1/2 top-[44%] -translate-x-1/2 -translate-y-1/2 lg:left-[63%]">
-          <span className="relative block">
-            <span className="cl-ripple absolute -inset-3 rounded-full border-2 border-[#D12800]" />
-            <span className="cl-ripple absolute -inset-3 rounded-full border-2 border-[#D12800]" style={{ animationDelay: "1.1s" }} />
-            <span className="block h-5 w-5 rounded-full border-[3px] border-white bg-[#D12800] shadow-[0_2px_8px_rgba(209,40,0,0.5)]" />
-          </span>
-        </div>
-
+    <section ref={root} id="act-ground" data-act data-header-theme="light" className="relative z-10" style={{ height: "600vh" }}>
+      {/* the stage is transparent — the 3D maquette renders behind it */}
+      <div className="sticky top-0 h-dvh overflow-hidden">
         {/* meta strip */}
         <div className="gm-meta absolute left-5 top-24 sm:left-10 lg:left-16">
           <div className="inline-flex items-center gap-2.5 rounded-lg border border-line bg-white/92 px-3.5 py-2 font-mono text-[12px] font-semibold tracking-wide text-ink shadow-sm backdrop-blur">
@@ -102,8 +114,8 @@ export function ActGround() {
         </div>
 
         <div className="relative mx-auto h-full max-w-[1400px] px-5 sm:px-10">
-          {/* copy beat 1 */}
-          <div className="gm-copy-1 absolute left-5 top-[34%] max-w-[520px] sm:left-10 lg:left-16">
+          {/* copy beat 1 — bird's eye */}
+          <div className="gm-copy-1 invisible absolute left-5 top-[30%] max-w-[520px] rounded-2xl bg-white/74 p-6 opacity-0 shadow-[0_18px_50px_-20px_rgba(20,40,60,0.35)] backdrop-blur-md sm:left-10 lg:left-16">
             <h2 className="text-[clamp(2rem,3.8vw,3.2rem)] font-extrabold leading-[1.07] tracking-[-0.02em] text-ink">
               Someone is already there.
             </h2>
@@ -113,8 +125,8 @@ export function ActGround() {
             </p>
           </div>
 
-          {/* copy beat 2 */}
-          <div className="gm-copy-2 absolute left-5 top-[26%] max-w-[460px] sm:left-10 lg:left-16">
+          {/* copy beat 2 — street level, the capture */}
+          <div className="gm-copy-2 invisible absolute left-5 top-[22%] max-w-[460px] rounded-2xl bg-white/74 p-6 opacity-0 shadow-[0_18px_50px_-20px_rgba(20,40,60,0.35)] backdrop-blur-md sm:left-10 lg:left-16">
             <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
               Report · three decisions
             </div>
@@ -138,6 +150,17 @@ export function ActGround() {
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* descent instrument cluster — kilometres became metres */}
+          <div className="gm-hud invisible absolute bottom-12 left-5 hidden rounded-xl bg-white/70 px-4 py-3 font-mono text-[12px] uppercase tracking-[0.18em] text-ink2 opacity-0 backdrop-blur-md sm:left-10 sm:block lg:left-16">
+            <div className="flex items-center gap-3">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#D12800]" />
+              Descending · 36.20°N 36.16°E
+            </div>
+            <div className="mt-2 text-[20px] font-bold tabular-nums text-ink">
+              <span ref={altRef}>Alt 700 m</span>
+            </div>
           </div>
 
           {/* the phone, stage right */}
@@ -165,7 +188,7 @@ export function ActGround() {
           </div>
         </div>
 
-        {/* arrival veil */}
+        {/* arrival veil — we exit the orbit act's whiteout inside this one */}
         <div className="gm-veil pointer-events-none absolute inset-0 z-20 bg-white" />
       </div>
     </section>

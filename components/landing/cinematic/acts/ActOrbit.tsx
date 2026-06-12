@@ -9,7 +9,7 @@ import { useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, Globe } from "lucide-react";
 import { gsap, ScrollTrigger, SplitText, useGSAP } from "../gsap";
-import { orbitBridge, setOrbitVisible } from "../bridge";
+import { orbitBridge, setActOn } from "../bridge";
 
 /* Same curve the camera rig uses — the altitude readout must agree with it. */
 const smoothstep = (a: number, b: number, x: number) => {
@@ -50,7 +50,7 @@ export function ActOrbit() {
 
       /* Master scrub → WebGL bridge. scrub:true (1:1) — the scene applies its
          own easing curves, and the altitude HUD must not lag the camera. */
-      ScrollTrigger.create({
+      const master = ScrollTrigger.create({
         trigger: root.current,
         start: "top top",
         end: "bottom bottom",
@@ -63,9 +63,12 @@ export function ActOrbit() {
             altRef.current.textContent = km.toLocaleString("en-US");
           }
         },
-        onLeave: () => setOrbitVisible(false),
-        onEnterBack: () => setOrbitVisible(true),
+        onLeave: () => setActOn("orbit", false),
+        onEnterBack: () => setActOn("orbit", true),
       });
+      /* A reload mid-page lands with the trigger already past — tell the
+         canvas the truth from the start. */
+      setActOn("orbit", master.isActive || master.progress < 1);
 
       /* Copy beats — a single scrubbed timeline, positions are fractions of
          the act. Text lags the camera slightly (scrub 0.6) for weight. */
