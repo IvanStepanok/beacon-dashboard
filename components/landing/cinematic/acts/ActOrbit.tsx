@@ -6,8 +6,6 @@
    through-the-clouds flash that hands off to the ground act. */
 
 import { useRef } from "react";
-import Link from "next/link";
-import { ArrowRight, Globe } from "lucide-react";
 import { gsap, ScrollTrigger, SplitText, useGSAP } from "../gsap";
 import { orbitBridge, setActOn } from "../bridge";
 
@@ -131,20 +129,6 @@ export function ActOrbit() {
                 and only when the sky agrees. The people who know the truth are already
                 standing in it.
               </p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <a
-                  href="#act-ground"
-                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-[15px] font-bold text-white transition-colors hover:bg-primary-ink"
-                >
-                  Watch the journey of one report <ArrowRight size={16} />
-                </a>
-                <Link
-                  href="/public"
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/25 px-5 py-3 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
-                >
-                  <Globe size={15} /> Live public map
-                </Link>
-              </div>
             </div>
           </div>
 

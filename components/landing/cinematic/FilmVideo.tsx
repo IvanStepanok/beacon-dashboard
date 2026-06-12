@@ -108,8 +108,10 @@ export function FilmVideo() {
       <video
         ref={videoRef}
         className="h-full w-full object-cover"
-        src="/landing/descent.mp4?v=2"
-        poster="/landing/descent-poster.jpg"
+        /* TESTING the "yafw balanced" master — revert to descent.mp4?v=2 +
+           descent-poster.jpg if the original grade wins */
+        src="/landing/descent-b.mp4?v=3"
+        poster="/landing/descent-b-poster.jpg"
         preload="auto"
         muted
         playsInline
