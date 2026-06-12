@@ -51,28 +51,23 @@ function useReducedMotion() {
   );
 }
 
-/* The device mock and the console mock have fixed pixel stages (360×800 and
-   1280×800) — on a 4K monitor a hardcoded scale leaves them toy-sized, on a
-   small laptop they crowd the copy. Two CSS variables, set from the real
-   viewport, drive every lg+ scale wrapper instead. */
+/* The device mock has a fixed 360×800 pixel stage — on a 4K monitor a
+   hardcoded scale leaves it toy-sized, on a small laptop it crowds the
+   copy. CSS variables set from the real viewport drive the lg+ scale
+   wrappers instead (the analyst console sizes itself inside ActSync's own
+   timeline, where it needs two different scales). */
 function useFluidStageScale(enabled: boolean) {
   useLayoutEffect(() => {
     if (!enabled) return;
     const root = document.documentElement;
     const apply = () => {
-      const w = window.innerWidth;
       const h = window.innerHeight;
       /* phone: fill ~75% of the stage height, never comically large/small */
       const phone = Math.min(Math.max(h / 880, 0.8), 1.6);
-      /* console: bounded by its act container (max-w 1500), not the raw
-         viewport — otherwise it swallows the copy column on wide monitors */
-      const cw = Math.min(w, 1500);
-      const dash = Math.min(Math.max(Math.min((cw * 0.58) / 1280, (h * 0.74) / 840), 0.42), 0.72);
       /* lift the bottom-anchored phones off the viewport floor on tall
          screens — 38% of the free space, capped */
       const lift = Math.min(Math.max(0, (h - 680 * phone) * 0.38), h * 0.12);
       root.style.setProperty("--phone-scale", phone.toFixed(3));
-      root.style.setProperty("--dash-scale", dash.toFixed(3));
       root.style.setProperty("--phone-lift", `${Math.round(lift)}px`);
     };
     apply();
@@ -80,7 +75,6 @@ function useFluidStageScale(enabled: boolean) {
     return () => {
       window.removeEventListener("resize", apply);
       root.style.removeProperty("--phone-scale");
-      root.style.removeProperty("--dash-scale");
       root.style.removeProperty("--phone-lift");
     };
   }, [enabled]);

@@ -23,15 +23,41 @@ export function ActSync() {
 
   useGSAP(
     () => {
-      gsap.set([".sy-copy-2", ".sy-copy-3"], { autoAlpha: 0, y: 42 });
+      gsap.set(".sy-copy-2", { autoAlpha: 0, y: 42 });
+      gsap.set(".sy-copy-3", { autoAlpha: 0, y: 42, xPercent: -50 });
       gsap.set(".sy-scr-1", { autoAlpha: 0 });
       gsap.set(".sy-scr-2", { autoAlpha: 0 });
-      gsap.set(".sy-dash", { xPercent: 118 });
+
+      /* The console has two ideal sizes: a compact teaser while it shares
+         the stage with the phone and copy, and a near-full-bleed hero once
+         it has the stage to itself. Both derive from the real viewport
+         (function-based + invalidateOnRefresh → recomputed on resize). */
+      const compactScale = () => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        return w < 1024
+          ? Math.min((w * 0.92) / 1280, (h * 0.5) / 840)
+          : Math.min(Math.max((w * 0.55) / 1280, 0.5), (h * 0.62) / 840, 0.85);
+      };
+      const bigScale = () => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        return Math.min(Math.max((w * 0.88) / 1280, 0.26), (h * 0.78) / 840, 1.8);
+      };
+      const hiddenX = () => window.innerWidth + 60;
+      const peekX = () => {
+        const w = window.innerWidth;
+        const visW = 1280 * compactScale();
+        return w < 1024
+          ? Math.max(w - visW * 0.98, w * 0.04)
+          : Math.max(w - visW * 0.86, w * 0.55 + 320);
+      };
+      const centerX = () => (window.innerWidth - 1280 * bigScale()) / 2;
       gsap.set(".sy-packet", { autoAlpha: 0 });
       gsap.set(".sy-dup-note", { autoAlpha: 0, y: 12 });
       gsap.set(".dm-pin", { scale: 0, transformOrigin: "50% 50%" });
       gsap.set(".dm-cluster", { scale: 0, transformOrigin: "50% 50%" });
-      gsap.set(".sy-final", { autoAlpha: 0, y: 16 });
+      gsap.set(".sy-final", { autoAlpha: 0, y: 16, xPercent: -50 });
       gsap.set(".dm-kpi-sub", { autoAlpha: 0 });
       gsap.set(".dm-stamp", { yPercent: -50, rotate: -8, scale: 2.4, autoAlpha: 0 });
       /* the pin the duplicate folds into */
@@ -44,6 +70,7 @@ export function ActSync() {
           start: "top top",
           end: "bottom bottom",
           scrub: 0.9,
+          invalidateOnRefresh: true,
         },
       });
 
@@ -52,8 +79,14 @@ export function ActSync() {
         .fromTo(".sy-phone", { autoAlpha: 0, y: 60 }, { autoAlpha: 1, y: 0, duration: 0.06, ease: "power2.out" }, 0.01)
         .fromTo(".sy-copy-1", { autoAlpha: 0, y: 42 }, { autoAlpha: 1, y: 0, duration: 0.05 }, 0.03)
         .to(".sy-scr-1", { autoAlpha: 1, duration: 0.04 }, 0.08)
-        /* console slides in to receive */
-        .to(".sy-dash", { xPercent: 24, duration: 0.12, ease: "power2.out" }, 0.12)
+        /* console slides in to receive — compact teaser off the right edge */
+        .fromTo(".sy-dash", { x: hiddenX }, { x: peekX, duration: 0.12, ease: "power2.out" }, 0.12)
+        .fromTo(
+          ".sy-dash-inner",
+          { scale: compactScale, transformOrigin: "top left" },
+          { scale: bigScale, duration: 0.1, ease: "power2.inOut" },
+          0.58,
+        )
         /* packets fly — staggered, each pops a pin on arrival */
         .fromTo(
           ".sy-packet",
@@ -69,8 +102,8 @@ export function ActSync() {
           ".sy-packet",
           {
             keyframes: [
-              { x: "24vw", y: "-13vh", scale: 0.92, duration: 0.05 },
-              { x: "44vw", y: "-5vh", scale: 0.55, autoAlpha: 0, duration: 0.05 },
+              { x: "30vw", y: "-13vh", scale: 0.92, duration: 0.05 },
+              { x: "56vw", y: "-5vh", scale: 0.55, autoAlpha: 0, duration: 0.05 },
             ],
             stagger: 0.045,
             ease: "power1.inOut",
@@ -94,8 +127,8 @@ export function ActSync() {
           ".sy-dup",
           {
             keyframes: [
-              { x: "30vw", y: "-12vh", scale: 0.8, duration: 0.045 },
-              { x: "47vw", y: "-6vh", scale: 0.15, autoAlpha: 0, duration: 0.04 },
+              { x: "34vw", y: "-12vh", scale: 0.8, duration: 0.045 },
+              { x: "58vw", y: "-6vh", scale: 0.15, autoAlpha: 0, duration: 0.04 },
             ],
             ease: "power1.inOut",
           },
@@ -105,9 +138,9 @@ export function ActSync() {
         .to(".sy-dup-note", { autoAlpha: 1, y: 0, duration: 0.04 }, 0.49)
         .to(".sy-dup-note", { autoAlpha: 0, duration: 0.04 }, 0.6)
         .to(".sy-copy-2", { autoAlpha: 0, y: -42, duration: 0.04 }, 0.56)
-        /* the console takes the stage */
+        /* the console takes the stage — big, dead center */
         .to(".sy-phone", { autoAlpha: 0, x: -80, duration: 0.06 }, 0.58)
-        .to(".sy-dash", { xPercent: 0, duration: 0.1, ease: "power2.inOut" }, 0.58)
+        .to(".sy-dash", { x: centerX, duration: 0.1, ease: "power2.inOut" }, 0.58)
         .to(".sy-copy-3", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.64)
         .to(".dm-kpi-sub", { autoAlpha: 1, duration: 0.04 }, 0.64)
         /* KPIs roll up (scrub-tied: reversing rolls them back down) */
@@ -176,18 +209,18 @@ export function ActSync() {
             </p>
           </div>
 
-          <div className="sy-copy-3 absolute left-5 top-[8%] max-w-[560px] sm:left-10 lg:left-16">
+          <div className="sy-copy-3 absolute left-1/2 top-[4%] w-[min(96vw,1640px)] text-center">
             <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
               The situation room
             </div>
-            <h2 className="mt-3 text-[clamp(1.8rem,3.4vw,2.8rem)] font-extrabold leading-[1.07] tracking-[-0.02em] text-ink">
+            <h2 className="mt-2.5 text-[clamp(1.4rem,2.3vw,2.4rem)] font-extrabold leading-[1.1] tracking-[-0.02em] text-ink">
               From a street in Antakya to a verified record — in hours, not weeks.
             </h2>
           </div>
 
           {/* the phone, stage left */}
           <div className="sy-phone absolute bottom-0 left-1/2 -translate-x-1/2 lg:bottom-[var(--phone-lift,0px)] lg:left-[3%] lg:translate-x-0">
-            <div className="origin-bottom scale-[0.5] sm:scale-[0.7] lg:scale-[calc(var(--phone-scale,1)*0.8)]">
+            <div className="origin-bottom scale-[0.5] sm:scale-[0.7] lg:scale-[calc(var(--phone-scale,1)*0.85)]">
               <PhoneFrame>
                 <div className="absolute inset-0 isolate">
                   <SyncStatusScreen stage={0} />
@@ -225,15 +258,16 @@ export function ActSync() {
             </span>
           </div>
 
-          {/* the analyst console */}
-          <div className="sy-dash absolute right-0 top-[24%] origin-top-right lg:top-[18%]">
-            <div className="origin-top-right scale-[0.28] sm:scale-[0.45] lg:scale-[var(--dash-scale,0.65)]">
-              <DashboardMock />
-            </div>
-          </div>
-
-          <div className="sy-final absolute bottom-10 left-5 font-mono text-[12.5px] font-semibold uppercase tracking-[0.14em] text-ink2 sm:left-10 lg:left-16">
+          <div className="sy-final absolute bottom-5 left-1/2 whitespace-nowrap font-mono text-[12.5px] font-semibold uppercase tracking-[0.14em] text-ink2">
             502,064 reports benchmarked · p95 submit 215 ms · five export formats, ready for GeoHub
+          </div>
+        </div>
+
+        {/* the analyst console — outside the copy container so the finale can
+            center on the full viewport, not the 1500px column */}
+        <div className="sy-dash absolute left-0 top-[26%] lg:top-[13%]">
+          <div className="sy-dash-inner">
+            <DashboardMock />
           </div>
         </div>
       </div>
