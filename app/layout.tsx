@@ -3,6 +3,7 @@ import { Noto_Sans, Noto_Sans_Mono, Roboto } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { AppShell } from "@/components/AppShell";
+import { SwKillSwitch } from "@/components/SwKillSwitch";
 
 // UNDP Design System body type is ProximaNova; its own non-Latin fallback is Noto
 // Sans (free, on Google Fonts, and covers all 6 UN scripts incl. Arabic/CJK). We
@@ -45,6 +46,8 @@ export default function RootLayout({
       className={`${notoSans.variable} ${notoMono.variable} ${roboto.variable} h-full antialiased`}
     >
       <body className="min-h-full font-sans text-ink">
+        {/* this origin once hosted PWA prototypes — evict their service workers */}
+        <SwKillSwitch />
         <AuthProvider>
           <AppShell>{children}</AppShell>
         </AuthProvider>
