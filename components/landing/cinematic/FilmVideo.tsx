@@ -24,7 +24,7 @@ import { orbitBridge, canvasVisible, onBridgeChange } from "./bridge";
 const T_CLOUDS = 4.2; /* orbit act end / ground act start — inside the deck */
 const T_END = 9.96; /* the last full frame — a hair under duration: seeking
                        to the exact end fires `ended` and can snap to 0 */
-const FLIGHT_END = 0.62; /* must match cityLayout's FLIGHT_END */
+const FLIGHT_END = 0.375; /* must match cityLayout's FLIGHT_END */
 
 function targetTime() {
   if (orbitBridge.cityOn || orbitBridge.city > 0) {

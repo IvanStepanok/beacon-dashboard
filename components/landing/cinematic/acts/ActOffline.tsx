@@ -59,7 +59,7 @@ export function ActOffline() {
   );
 
   return (
-    <section ref={root} id="act-offline" data-act data-header-theme="dark" className="relative z-10" style={{ height: "340vh", background: "#0E1722" }}>
+    <section ref={root} id="act-offline" data-act data-header-theme="dark" className="relative z-10" style={{ height: "400vh", background: "#0E1722" }}>
       <div className="sticky top-0 h-dvh overflow-hidden">
         <div className="relative mx-auto h-full max-w-[1400px] px-5 sm:px-10">
           {/* copy 1 — the blackout */}

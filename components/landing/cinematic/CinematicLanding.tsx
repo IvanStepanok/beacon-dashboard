@@ -212,7 +212,7 @@ export default function CinematicLanding() {
        Desktop-gated: below lg the privacy act flows unstickied. */
     const SNAP_SPECS: { id: string; states: number[]; stepped?: [number, number] }[] = [
       { id: "act-orbit", states: [0, 0.42, 0.84] },
-      { id: "act-ground", states: [0.28, 0.76, 0.835, 0.94], stepped: [0.62, 1] },
+      { id: "act-ground", states: [0.17, 0.47, 0.65, 0.88], stepped: [0.375, 1] },
       { id: "act-offline", states: [0.2, 0.47, 0.75], stepped: [0, 1] },
       { id: "act-privacy", states: [0.12, 0.4, 0.78], stepped: [0, 1] },
       { id: "act-sync", states: [0.27, 0.5, 0.8, 0.95], stepped: [0, 1] },

@@ -269,7 +269,11 @@ export function camAltitudeAt(u: number) {
 }
 
 /* Flight pacing shared by rig + HUD: p (act progress) → curve parameter. */
-export const FLIGHT_END = 0.62; // act progress where the camera reaches the street
+/* Act progress where the camera reaches the street. 0.375 of the 530vh act
+   keeps the flight at the same absolute scroll length it had at 0.62 of
+   360vh — the act's extra height all goes to the capture states, spaced
+   like Apple's product-story slides (~80–110vh per state). */
+export const FLIGHT_END = 0.375;
 export function flightU(p: number) {
   const n = Math.min(1, Math.max(0, p / FLIGHT_END));
   return 1 - Math.pow(1 - n, 2.1); // fast out of the clouds, soft landing

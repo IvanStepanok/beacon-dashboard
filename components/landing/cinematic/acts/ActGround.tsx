@@ -76,35 +76,37 @@ export function ActGround() {
 
       tl
         /* out of the cloud deck — the video carries the reveal */
-        .to(".gm-meta", { autoAlpha: 1, x: 0, duration: 0.04 }, 0.045)
-        .to(".gm-hud", { autoAlpha: 1, duration: 0.03 }, 0.045)
+        .to(".gm-meta", { autoAlpha: 1, x: 0, duration: 0.025 }, 0.03)
+        .to(".gm-hud", { autoAlpha: 1, duration: 0.02 }, 0.03)
         /* bird's eye copy */
-        .to(".gm-copy-1", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.13)
-        .to(".gm-copy-1", { autoAlpha: 0, y: -42, duration: 0.05 }, 0.42)
-        /* street arrival: the phone comes out */
-        .to(".gm-phone", { yPercent: 0, rotateX: 0, duration: 0.1, ease: "power2.out" }, FLIGHT_END + 0.02)
-        .to(".gm-copy-2", { autoAlpha: 1, y: 0, duration: 0.05 }, FLIGHT_END + 0.05)
-        .to(".gm-tap-1", { autoAlpha: 1, y: 0, duration: 0.04 }, FLIGHT_END + 0.13)
+        .to(".gm-copy-1", { autoAlpha: 1, y: 0, duration: 0.03 }, 0.08)
+        .to(".gm-copy-1", { autoAlpha: 0, y: -42, duration: 0.03 }, 0.25)
+        /* street arrival: the phone comes out. From here on the act is a
+           stepped product story — camera → AI verdict → confirm the tier —
+           with ~80–110vh of scroll per state (measured off Apple's
+           macbook-pro performance section, where the rhythm feels right) */
+        .to(".gm-phone", { yPercent: 0, rotateX: 0, duration: 0.06, ease: "power2.out" }, FLIGHT_END + 0.012)
+        .to(".gm-copy-2", { autoAlpha: 1, y: 0, duration: 0.03 }, FLIGHT_END + 0.03)
+        .to(".gm-tap-1", { autoAlpha: 1, y: 0, duration: 0.025 }, FLIGHT_END + 0.055)
         /* shutter: press, flash, and the AI layer is there when it clears */
-        .to(".gm-scr-aim .cam-shutter", { scale: 0.84, duration: 0.012, ease: "power1.in" }, 0.775)
-        .to(".gm-scr-aim .cam-shutter", { scale: 1, duration: 0.016, ease: "power1.out" }, 0.787)
-        .to(".gm-shutterflash", { opacity: 1, duration: 0.015, ease: "power1.in" }, 0.787)
-        .to(".gm-scr-ai", { autoAlpha: 1, duration: 0.001 }, 0.8)
-        .to(".gm-shutterflash", { opacity: 0, duration: 0.035, ease: "power2.out" }, 0.805)
+        .to(".gm-scr-aim .cam-shutter", { scale: 0.84, duration: 0.008, ease: "power1.in" }, 0.56)
+        .to(".gm-scr-aim .cam-shutter", { scale: 1, duration: 0.01, ease: "power1.out" }, 0.568)
+        .to(".gm-shutterflash", { opacity: 1, duration: 0.01, ease: "power1.in" }, 0.568)
+        .to(".gm-scr-ai", { autoAlpha: 1, duration: 0.001 }, 0.578)
+        .to(".gm-shutterflash", { opacity: 0, duration: 0.022, ease: "power2.out" }, 0.582)
         /* the verdict chip pops on its own beat */
         .fromTo(
           ".gm-scr-ai .cam-ai-chip",
           { autoAlpha: 0, y: 26 },
-          { autoAlpha: 1, y: 0, duration: 0.04, ease: "power3.out" },
-          0.81,
+          { autoAlpha: 1, y: 0, duration: 0.025, ease: "power3.out" },
+          0.588,
         )
-        /* hand over to the real damage-tier screen — early, so "confirm the
-           tier" holds the stage for the act's whole tail */
-        .to(".gm-scr-tier", { autoAlpha: 1, duration: 0.05 }, 0.865)
-        .to(".gm-tap-1", { autoAlpha: 0, y: -10, duration: 0.025 }, 0.865)
-        .to(".gm-tap-2", { autoAlpha: 1, y: 0, duration: 0.025 }, 0.89)
-        .to(".gm-hud", { autoAlpha: 0, duration: 0.03 }, 0.88)
-        .to(".gm-copy-2", { autoAlpha: 0, y: -42, duration: 0.04 }, 0.9)
+        /* hand over to the real damage-tier screen */
+        .to(".gm-scr-tier", { autoAlpha: 1, duration: 0.03 }, 0.76)
+        .to(".gm-tap-1", { autoAlpha: 0, y: -10, duration: 0.015 }, 0.76)
+        .to(".gm-tap-2", { autoAlpha: 1, y: 0, duration: 0.015 }, 0.78)
+        .to(".gm-hud", { autoAlpha: 0, duration: 0.02 }, 0.77)
+        .to(".gm-copy-2", { autoAlpha: 0, y: -42, duration: 0.025 }, 0.79)
         /* anchor: scrub maps scroll onto [0,1] exactly */
         .set({}, {}, 1);
     },
@@ -117,7 +119,7 @@ export function ActGround() {
        the boundary spends a full 100vh sliding one white stage out and the
        other in (the "white tunnel"). The stage stays transparent during the
        overlap (veil gate above). */
-    <section ref={root} id="act-ground" data-act data-header-theme="light" className="relative z-10 -mt-[100vh]" style={{ height: "360vh" }}>
+    <section ref={root} id="act-ground" data-act data-header-theme="light" className="relative z-10 -mt-[100vh]" style={{ height: "530vh" }}>
       {/* the stage is transparent — the film renders behind it */}
       <div className="sticky top-0 h-dvh overflow-hidden">
         <div className="relative mx-auto h-full max-w-[1400px] px-5 sm:px-10">
