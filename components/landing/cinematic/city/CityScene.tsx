@@ -394,24 +394,61 @@ function CityRig() {
 /* -------------------------------------------------------------- stage -- */
 
 /* Fog is a scene-level property — flip it with the act, never leave it on
-   for the orbit globe. The fog closes in as the camera descends: from the
-   cloud deck the whole map reads through a thin haze, but by the time we
-   stand on the street the world is a Silent-Hill bubble — the subject
-   50 m away is crisp, silhouettes ghost out by ~300 m, and past ~450 m
-   there is only the wall of fog. The closure finishes right as the phone
-   comes up: the seen world shrinks to what one person can witness. */
+   for the orbit globe. Density follows the camera's ALTITUDE (not scroll):
+   scroll-based curves left the fog wall kilometres past the maquette's rim
+   at the bird's-eye beat, so the map edge read as a table edge. Tied to
+   altitude, the wall always stands a few hundred metres past whatever the
+   camera can see — a fog sea swallowing the rim from the air, a Silent-Hill
+   bubble (crisp at 50 m, milk past ~380 m) at eye level. */
 function FogController() {
   const scene = useThree((s) => s.scene);
   const fog = useMemo(() => new THREE.Fog("#EDE7DA", 550, 3200), []);
-  useFrame(() => {
+  useFrame(({ camera }) => {
     const want = orbitBridge.cityOn ? fog : null;
     if (scene.fog !== want) scene.fog = want;
     if (!orbitBridge.cityOn) return;
-    const k = smoothstep(0.15, 0.7, orbitBridge.city);
-    fog.near = lerp(550, 30, k);
-    fog.far = lerp(3200, 380, k);
+    const alt = camera.position.y;
+    const a = smoothstep(3, 170, alt);
+    const b = smoothstep(170, 620, alt);
+    fog.near = lerp(lerp(30, 430, a), 620, b);
+    fog.far = lerp(lerp(380, 1500, a), 2300, b);
   });
   return null;
+}
+
+/* The maquette's rim, feathered in world space: a ground sheet whose
+   radial alpha ramps from clear over the city to solid haze just past the
+   map's edge. Camera fog alone can't kill the rim from the air — the edge
+   sits at roughly the same distance as the city itself — so the dissolve
+   has to live in the world, not in the camera. Iso-alpha curves are
+   ellipses matching the 1500×850 map (drawn through a squashed context). */
+function HazeRing() {
+  const texture = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 1024;
+    c.height = 1024;
+    const ctx = c.getContext("2d")!;
+    const px = (m: number) => (m / 2600) * 512; // plane is 5200 m wide
+    ctx.translate(512, 512);
+    ctx.scale(1, 850 / 1500);
+    const g = ctx.createRadialGradient(0, 0, px(780), 0, 0, px(2600));
+    g.addColorStop(0, "rgba(237,231,218,0)");
+    g.addColorStop(0.15, "rgba(237,231,218,0.85)");
+    g.addColorStop(0.29, "rgba(237,231,218,1)");
+    g.addColorStop(1, "rgba(237,231,218,1)");
+    ctx.fillStyle = g;
+    ctx.fillRect(-512, -904, 1024, 1808);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+  useEffect(() => () => texture.dispose(), [texture]);
+  return (
+    <mesh rotation-x={-Math.PI / 2} position={[750, 0.6, 425]}>
+      <planeGeometry args={[5200, 5200]} />
+      <meshBasicMaterial map={texture} transparent depthWrite={false} fog={false} />
+    </mesh>
+  );
 }
 
 /* In-scene sky: a gradient dome whose horizon band is the exact fog color,
@@ -487,6 +524,7 @@ export function CityStage() {
       <hemisphereLight args={["#EAF2F8", "#D9CFC0", 0.72]} />
       <Sun />
       <Ground />
+      <HazeRing />
       <Buildings />
       <Trees />
       <HeroBuilding />
