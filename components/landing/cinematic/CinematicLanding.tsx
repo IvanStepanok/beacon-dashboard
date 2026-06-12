@@ -189,6 +189,8 @@ function FilmChrome({ lenisRef }: { lenisRef: RefObject<Lenis | null> }) {
 export default function CinematicLanding() {
   const reduced = useReducedMotion();
   const lenisRef = useRef<Lenis | null>(null);
+  /* 0..1 while the film buffers (scroll is held); null once released */
+  const [filmLoading, setFilmLoading] = useState<number | null>(0);
   useFluidStageScale(!reduced);
 
   /* Smooth-scroll substrate, single rAF via gsap.ticker. `anchors` keeps the
@@ -197,6 +199,28 @@ export default function CinematicLanding() {
     if (reduced) return;
     const lenis = new Lenis({ autoRaf: false, lerp: 0.1, anchors: true });
     lenisRef.current = lenis;
+
+    /* ── film preload gate ───────────────────────────────────────────────
+       The hero paints instantly (poster frame), but scrubbing into an
+       unbuffered region shows frozen frames — so the wheel stays locked
+       until the film reports enough buffer for the whole descent (~7 s of
+       10). On broadband this is sub-second; a failsafe releases the page
+       after 8 s no matter what so a flaky link can't trap anyone. */
+    let unlocked = false;
+    lenis.stop();
+    const unlock = () => {
+      if (unlocked) return;
+      unlocked = true;
+      lenis.start();
+      setFilmLoading(null);
+    };
+    const onBuffer = (e: Event) => {
+      const { fraction, ready } = (e as CustomEvent<{ fraction: number; ready: boolean }>).detail;
+      if (ready) unlock();
+      else setFilmLoading((cur) => (cur === null ? null : fraction));
+    };
+    window.addEventListener("beacon:film-buffer", onBuffer);
+    const failsafe = window.setTimeout(unlock, 8000);
 
     /* ── state snapping ──────────────────────────────────────────────────
        Video-editor magnetism, two regimes:
@@ -266,6 +290,8 @@ export default function CinematicLanding() {
     gsap.ticker.lagSmoothing(0);
     return () => {
       window.clearTimeout(snapTimer);
+      window.clearTimeout(failsafe);
+      window.removeEventListener("beacon:film-buffer", onBuffer);
       ScrollTrigger.removeEventListener("refresh", measure);
       gsap.ticker.remove(raf);
       lenis.destroy();
@@ -278,6 +304,13 @@ export default function CinematicLanding() {
   return (
     <div className="relative bg-white">
       <FilmVideo />
+      {/* film preload pill — scroll is held until the descent is buffered */}
+      {filmLoading !== null && (
+        <div className="fixed bottom-8 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2.5 rounded-full border border-white/15 bg-[#04090F]/80 px-4 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-white/85 backdrop-blur">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#FF5B3D]" />
+          Loading the film · {Math.round(filmLoading * 100)}%
+        </div>
+      )}
       <FilmChrome lenisRef={lenisRef} />
       <main>
         <ActOrbit />
