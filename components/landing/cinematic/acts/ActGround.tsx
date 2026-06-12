@@ -116,7 +116,7 @@ export function ActGround() {
        the boundary spends a full 100vh sliding one white stage out and the
        other in (the "white tunnel"). The stage stays transparent during the
        overlap (veil gate above). */
-    <section ref={root} id="act-ground" data-act data-header-theme="light" className="relative z-10 -mt-[100vh]" style={{ height: "600vh" }}>
+    <section ref={root} id="act-ground" data-act data-header-theme="light" className="relative z-10 -mt-[100vh]" style={{ height: "360vh" }}>
       {/* the stage is transparent — the film renders behind it */}
       <div className="sticky top-0 h-dvh overflow-hidden">
         <div className="relative mx-auto h-full max-w-[1400px] px-5 sm:px-10">

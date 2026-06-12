@@ -100,7 +100,7 @@ export function ActOrbit() {
   );
 
   return (
-    <section ref={root} id="act-orbit" data-act data-header-theme="dark" className="relative" style={{ height: "560vh" }}>
+    <section ref={root} id="act-orbit" data-act data-header-theme="dark" className="relative" style={{ height: "320vh" }}>
       <div className="orb-stage sticky top-0 h-dvh overflow-hidden">
         {/* readability scrims behind the copy */}
         <div aria-hidden className="orb-scrims pointer-events-none absolute inset-0">
