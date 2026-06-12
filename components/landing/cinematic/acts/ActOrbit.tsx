@@ -58,7 +58,7 @@ export function ActOrbit() {
         onUpdate: (self) => {
           orbitBridge.progress = self.progress;
           if (altRef.current) {
-            const r = gsap.utils.interpolate(3.25, 1.18, smoothstep(0.52, 0.92, self.progress));
+            const r = gsap.utils.interpolate(3.25, 1.34, smoothstep(0.52, 0.88, self.progress));
             const km = Math.max(56, Math.round(((r - 1) / 2.25) * 700));
             altRef.current.textContent = km.toLocaleString("en-US");
           }
@@ -91,10 +91,12 @@ export function ActOrbit() {
         .to(".orb-beat-2", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.37)
         .to(".orb-beat-2", { autoAlpha: 0, y: -48, duration: 0.05 }, 0.5)
         .to(".orb-hud", { autoAlpha: 1, duration: 0.03 }, 0.56)
-        .to(".orb-hud", { autoAlpha: 0, duration: 0.03 }, 0.8)
-        .to(".orb-flash", { opacity: 1, duration: 0.1, ease: "power1.in" }, 0.82)
+        .to(".orb-hud", { autoAlpha: 0, duration: 0.03 }, 0.87)
+        /* the cloud shell fully wraps the globe from 0.8 — let IT carry the
+           transition and keep the pure white to a blink, not a corridor */
+        .to(".orb-flash", { opacity: 1, duration: 0.06, ease: "power1.in" }, 0.9)
         /* hold the white through the act's end — the ground veil takes over */
-        .to(".orb-flash", { opacity: 1, duration: 0.06, ease: "none" }, 0.94)
+        .to(".orb-flash", { opacity: 1, duration: 0.04, ease: "none" }, 0.96)
         .set({}, {}, 1);
     },
     { scope: root },
@@ -102,7 +104,7 @@ export function ActOrbit() {
 
   return (
     <section ref={root} id="act-orbit" data-act data-header-theme="dark" className="relative" style={{ height: "560vh" }}>
-      <div className="sticky top-0 h-dvh overflow-hidden">
+      <div className="orb-stage sticky top-0 h-dvh overflow-hidden">
         {/* readability scrims behind the copy */}
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-[#04090F]/45 lg:hidden" />
         <div

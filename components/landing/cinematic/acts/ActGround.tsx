@@ -49,9 +49,23 @@ export function ActGround() {
                   : "Eye level · 1.7 m";
           }
         },
-        onToggle: (self) => setActOn("city", self.isActive),
+        onToggle: (self) => {
+          setActOn("city", self.isActive);
+          /* this section overlaps the orbit act's last 100vh, so the pin is
+             the cut point — and it happens under full white on both sides:
+             the veil gate switches on (the stage was transparent while it
+             slid up over the orbit), and the orbit's released stage (still
+             showing its flash and scrims) switches off so it can't ghost
+             through this transparent act while it slides out of the flow. */
+          gsap.set(".gm-veil-gate", { opacity: self.isActive ? 1 : 0 });
+          /* lives in the orbit act — outside this useGSAP scope, so pass
+             the element itself, not a (scoped) selector string */
+          gsap.set(document.querySelectorAll(".orb-stage"), { autoAlpha: self.isActive ? 0 : 1 });
+        },
       });
       setActOn("city", master.isActive);
+      gsap.set(".gm-veil-gate", { opacity: master.isActive ? 1 : 0 });
+      gsap.set(document.querySelectorAll(".orb-stage"), { autoAlpha: master.isActive ? 0 : 1 });
 
       /* DOM beats on the same scroll axis (slight lag for weight). */
       const tl = gsap.timeline({
@@ -65,12 +79,12 @@ export function ActGround() {
       });
 
       tl
-        /* out of the whiteout */
-        .fromTo(".gm-veil", { opacity: 1 }, { opacity: 0, duration: 0.06, ease: "power1.out" }, 0)
-        .to(".gm-meta", { autoAlpha: 1, x: 0, duration: 0.04 }, 0.07)
-        .to(".gm-hud", { autoAlpha: 1, duration: 0.03 }, 0.07)
+        /* out of the whiteout — fast: the white blink is a cut, not a tunnel */
+        .fromTo(".gm-veil", { opacity: 1 }, { opacity: 0, duration: 0.03, ease: "power1.out" }, 0)
+        .to(".gm-meta", { autoAlpha: 1, x: 0, duration: 0.04 }, 0.045)
+        .to(".gm-hud", { autoAlpha: 1, duration: 0.03 }, 0.045)
         /* bird's eye copy */
-        .to(".gm-copy-1", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.16)
+        .to(".gm-copy-1", { autoAlpha: 1, y: 0, duration: 0.05 }, 0.13)
         .to(".gm-copy-1", { autoAlpha: 0, y: -42, duration: 0.05 }, 0.42)
         /* street arrival: the phone comes out */
         .to(".gm-phone", { yPercent: 0, rotateX: 0, duration: 0.1, ease: "power2.out" }, FLIGHT_END + 0.02)
@@ -102,7 +116,12 @@ export function ActGround() {
   );
 
   return (
-    <section ref={root} id="act-ground" data-act data-header-theme="light" className="relative z-10" style={{ height: "600vh" }}>
+    /* -mt-[100vh]: the section overlaps the orbit act's last viewport, so
+       its pin starts the moment the orbit sticky releases — without this,
+       the boundary spends a full 100vh sliding one white stage out and the
+       other in (the "white tunnel"). The stage stays transparent during the
+       overlap (veil gate above). */
+    <section ref={root} id="act-ground" data-act data-header-theme="light" className="relative z-10 -mt-[100vh]" style={{ height: "600vh" }}>
       {/* the stage is transparent — the 3D maquette renders behind it */}
       <div className="sticky top-0 h-dvh overflow-hidden">
         <div className="relative mx-auto h-full max-w-[1400px] px-5 sm:px-10">
@@ -191,7 +210,12 @@ export function ActGround() {
         </div>
 
         {/* arrival veil — we exit the orbit act's whiteout inside this one */}
-        <div className="gm-veil pointer-events-none absolute inset-0 z-20 bg-white" />
+        {/* gate: opacity flips with the act's pin (master onToggle) so the
+            stage stays fully transparent while it slides up over the orbit
+            act's last 100vh — the inner veil keeps its scrubbed fade */}
+        <div className="gm-veil-gate pointer-events-none absolute inset-0 z-20 opacity-0">
+          <div className="gm-veil absolute inset-0 bg-white" />
+        </div>
       </div>
     </section>
   );

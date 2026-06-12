@@ -299,7 +299,7 @@ function EntryClouds() {
   );
 
   useFrame(({ clock, camera }) => {
-    const o = 1 - smoothstep(0.03, 0.17, orbitBridge.city);
+    const o = 1 - smoothstep(0.02, 0.1, orbitBridge.city);
     group.current.visible = o > 0.001;
     group.current.children.forEach((child, i) => {
       child.lookAt(camera.position);

@@ -35,14 +35,17 @@ const smoothstep = (a: number, b: number, x: number) => {
 const lerp = THREE.MathUtils.lerp;
 
 const camLat = (p: number) => lerp(14, TARGET.lat, smoothstep(0.36, 0.6, p));
-/* Dive ends at r=1.18 — close enough for the arrival, far enough that the
-   instanced dots stay dot-sized; the DOM flash owns everything past 0.82. */
-const camRadius = (p: number) => lerp(3.25, 1.18, smoothstep(0.52, 0.92, p));
+/* Dive ends at r=1.34 by 0.88 — close enough for the arrival, far enough
+   that the instanced dots stay dot-sized. The DOM flash is now only a short
+   blink at 0.9, so the cloud layers (shell + puff wall) must fully cover
+   the closeup on their own by ~0.86. */
+const camRadius = (p: number) => lerp(3.25, 1.34, smoothstep(0.52, 0.88, p));
 const alignAmount = (p: number) => smoothstep(0.18, 0.6, p);
-const cloudCover = (p: number) => lerp(0.34, 0.66, smoothstep(0.16, 0.4, p));
+const cloudCover = (p: number) =>
+  lerp(0.34, 0.66, smoothstep(0.16, 0.4, p)) + 0.3 * smoothstep(0.74, 0.88, p);
 const markerFade = (p: number) =>
   1 - 0.85 * smoothstep(0.2, 0.36, p) + 0.85 * smoothstep(0.52, 0.68, p);
-const descentCloudsIn = (p: number) => smoothstep(0.7, 0.86, p);
+const descentCloudsIn = (p: number) => smoothstep(0.64, 0.8, p);
 const satelliteFade = (p: number) => smoothstep(0.04, 0.1, p) * (1 - smoothstep(0.44, 0.56, p));
 
 /* ---------------------------------------------------------------- globe -- */
@@ -171,7 +174,7 @@ function DescentClouds() {
     const dir = latLngToVector3(TARGET.lat, CAM_LNG, 1).normalize();
     const right = new THREE.Vector3(0, 1, 0).cross(dir).normalize();
     const up = dir.clone().cross(right).normalize();
-    return Array.from({ length: 9 }, (_, i) => {
+    const ring = Array.from({ length: 9 }, (_, i) => {
       const t = i / 8;
       const radius = lerp(2.0, 1.12, t);
       const a = i * 2.39996; // golden-angle scatter around the corridor
@@ -182,20 +185,36 @@ function DescentClouds() {
         .multiplyScalar(radius)
         .addScaledVector(right, Math.cos(a) * spread)
         .addScaledVector(up, Math.sin(a) * spread * 0.6);
-      return { pos, seed: i * 7.31, scale: 0.6 + (i % 3) * 0.3 };
+      return { pos, seed: i * 7.31, scale: 0.6 + (i % 3) * 0.3, late: false };
     });
+    /* The wall: puffs straight on the axis, fading in only at the very end.
+       The first two get crossed (fly-through), the last two sit BELOW the
+       camera's final radius (1.34) so they keep covering the dot field all
+       the way to the act's end — the white is just a blink now. */
+    const wall = [1.46, 1.36, 1.28, 1.22].map((radius, i) => {
+      const a = i * 2.1 + 0.7;
+      const pos = dir
+        .clone()
+        .multiplyScalar(radius)
+        .addScaledVector(right, Math.cos(a) * 0.1)
+        .addScaledVector(up, Math.sin(a) * 0.07);
+      return { pos, seed: 31.7 + i * 5.13, scale: 1.05 + (i % 2) * 0.35, late: true };
+    });
+    return [...ring, ...wall];
   }, []);
   const mats = useRef<(THREE.ShaderMaterial | null)[]>([]);
 
   useFrame(({ clock, camera }) => {
-    const o = descentCloudsIn(orbitBridge.progress);
+    const prog = orbitBridge.progress;
+    const o = descentCloudsIn(prog);
+    const oLate = smoothstep(0.78, 0.88, prog);
     group.current.visible = o > 0.001;
     group.current.children.forEach((child, i) => {
       child.lookAt(camera.position);
       const m = mats.current[i];
       if (m) {
         m.uniforms.uTime.value = clock.elapsedTime;
-        m.uniforms.uOpacity.value = o * 0.85;
+        m.uniforms.uOpacity.value = (puffs[i].late ? oLate : o) * 0.85;
       }
     });
   });
