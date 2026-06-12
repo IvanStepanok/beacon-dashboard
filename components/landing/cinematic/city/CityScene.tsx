@@ -394,19 +394,22 @@ function CityRig() {
 /* -------------------------------------------------------------- stage -- */
 
 /* Fog is a scene-level property — flip it with the act, never leave it on
-   for the orbit globe. Near/far tighten as the camera descends: thin aerial
-   haze from the cloud deck, a dense dust horizon at eye level — the far
-   blocks melt away instead of staying crisp to the maquette's edge. */
+   for the orbit globe. The fog closes in as the camera descends: from the
+   cloud deck the whole map reads through a thin haze, but by the time we
+   stand on the street the world is a Silent-Hill bubble — the subject
+   50 m away is crisp, silhouettes ghost out by ~300 m, and past ~450 m
+   there is only the wall of fog. The closure finishes right as the phone
+   comes up: the seen world shrinks to what one person can witness. */
 function FogController() {
   const scene = useThree((s) => s.scene);
-  const fog = useMemo(() => new THREE.Fog("#EDE7DA", 700, 4200), []);
+  const fog = useMemo(() => new THREE.Fog("#EDE7DA", 550, 3200), []);
   useFrame(() => {
     const want = orbitBridge.cityOn ? fog : null;
     if (scene.fog !== want) scene.fog = want;
     if (!orbitBridge.cityOn) return;
-    const k = smoothstep(0.18, 0.85, orbitBridge.city);
-    fog.near = lerp(700, 190, k);
-    fog.far = lerp(4200, 1450, k);
+    const k = smoothstep(0.15, 0.7, orbitBridge.city);
+    fog.near = lerp(550, 30, k);
+    fog.far = lerp(3200, 380, k);
   });
   return null;
 }
