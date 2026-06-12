@@ -199,33 +199,40 @@ export default function CinematicLanding() {
     lenisRef.current = lenis;
 
     /* ── state snapping ──────────────────────────────────────────────────
-       Video-editor magnetism: each act lists its stable states (a copy beat
-       fully shown, a phone screen settled) as act-progress fractions —
-       they mirror the acts' own timelines. When scrolling comes to rest
-       within SNAP_RADIUS of a state, Lenis glides the last bit onto it, so
-       landing on a screen stops being precision work; resting farther away
-       (free-scrubbing the flight) is left alone. Desktop-gated: below lg
-       the privacy act flows unstickied and the fractions don't hold. */
-    const SNAP_STATES: [string, number[]][] = [
-      ["act-orbit", [0, 0.42, 0.84]],
-      ["act-ground", [0.28, 0.76, 0.88, 0.97]],
-      ["act-offline", [0.2, 0.47, 0.75]],
-      ["act-privacy", [0.4, 0.78]],
-      ["act-sync", [0.27, 0.5, 0.8, 0.95]],
+       Video-editor magnetism, two regimes:
+       · UI zones (`stepped` range of an act): the phone/console screens
+         live here — resting between states is never allowed, scroll always
+         settles onto the nearest state, so two screens can't sit blended
+         in a half-crossfade. Transitions play while you scroll; rests are
+         always clean frames.
+       · Film zones (everything else — the planet, the flight): free
+         scrubbing; only a rest already within SNAP_RADIUS of a state gets
+         pulled onto it.
+       Fractions mirror the acts' timelines — retime both together.
+       Desktop-gated: below lg the privacy act flows unstickied. */
+    const SNAP_SPECS: { id: string; states: number[]; stepped?: [number, number] }[] = [
+      { id: "act-orbit", states: [0, 0.42, 0.84] },
+      { id: "act-ground", states: [0.28, 0.76, 0.88, 0.97], stepped: [0.62, 1] },
+      { id: "act-offline", states: [0.2, 0.47, 0.75], stepped: [0, 1] },
+      { id: "act-privacy", states: [0.12, 0.4, 0.78], stepped: [0, 1] },
+      { id: "act-sync", states: [0.27, 0.5, 0.8, 0.95], stepped: [0, 1] },
     ];
     const SNAP_RADIUS_VH = 0.22;
     const SNAP_DELAY_MS = 160;
     let points: number[] = [];
+    let zones: [number, number][] = [];
     const measure = () => {
       points = [];
+      zones = [];
       if (window.innerWidth < 1024) return;
-      for (const [id, fracs] of SNAP_STATES) {
+      for (const { id, states, stepped } of SNAP_SPECS) {
         const el = document.getElementById(id);
         if (!el) continue;
         const top = el.getBoundingClientRect().top + window.scrollY;
         const span = el.offsetHeight - window.innerHeight;
         if (span <= 0) continue;
-        for (const f of fracs) points.push(Math.round(top + f * span));
+        for (const f of states) points.push(Math.round(top + f * span));
+        if (stepped) zones.push([Math.round(top + stepped[0] * span), Math.round(top + stepped[1] * span)]);
       }
       points.sort((a, b) => a - b);
     };
@@ -240,9 +247,11 @@ export default function CinematicLanding() {
       let best = points[0];
       for (const p of points) if (Math.abs(p - y) < Math.abs(best - y)) best = p;
       const d = Math.abs(best - y);
-      if (d < 2 || d > window.innerHeight * SNAP_RADIUS_VH) return;
-      glidingUntil = performance.now() + 950;
-      lenis.scrollTo(best, { duration: 0.6, easing: (t: number) => 1 - Math.pow(1 - t, 3) });
+      const inUiZone = zones.some(([a, b]) => y >= a && y <= b);
+      if (d < 2 || (!inUiZone && d > window.innerHeight * SNAP_RADIUS_VH)) return;
+      const duration = 0.45 + Math.min(d / 1500, 0.45);
+      glidingUntil = performance.now() + duration * 1000 + 350;
+      lenis.scrollTo(best, { duration, easing: (t: number) => 1 - Math.pow(1 - t, 3) });
     };
     const onScroll = () => {
       ScrollTrigger.update();
