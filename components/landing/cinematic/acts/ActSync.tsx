@@ -6,8 +6,8 @@
    folds into an existing pin instead of double-counting; then the console
    takes the stage — KPIs roll up, a report gets verified, exports stream. */
 
-import { useEffect, useRef, useState } from "react";
-import { gsap, ScrollTrigger, useGSAP } from "../gsap";
+import { useRef } from "react";
+import { gsap, useGSAP } from "../gsap";
 import { PhoneFrame } from "../../PhoneFrame";
 import { SyncStatusScreen } from "../screens-extra";
 import { DashboardMock } from "../DashboardMock";
@@ -18,208 +18,6 @@ const PACKETS = [
   { id: "6f2d7988", tier: "#59BA47", top: "62%" },
 ] as const;
 
-/* ──────────────────────────────────────────────────────────────────────────
-   TEMPORARY calibration rig — DELETE after the layout coordinates are baked.
-   Lets Ivan drag the phone / console and resize them (red corner dot) on any
-   monitor, then copy the measured geometry. Scroll is frozen while tuning so
-   the scrubbed timeline can't overwrite manual placement; "→ Teaser/Finale"
-   jump between the two console phases (copy BEFORE jumping — a jump lets the
-   timeline rewrite everything). */
-const TUNE_BTN =
-  "pointer-events-auto rounded-lg bg-ink px-3 py-2 text-[12px] font-semibold text-white shadow-md transition-colors hover:bg-primary";
-
-function SyncTuner() {
-  const [on, setOn] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    if (!on) return;
-    const cleanups: (() => void)[] = [];
-
-    /* freeze scrolling — the scrub only rewrites transforms on scroll ticks */
-    const block = (e: Event) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-    window.addEventListener("wheel", block, { passive: false, capture: true });
-    window.addEventListener("touchmove", block, { passive: false, capture: true });
-    cleanups.push(() => {
-      window.removeEventListener("wheel", block, { capture: true });
-      window.removeEventListener("touchmove", block, { capture: true });
-    });
-    document.body.style.userSelect = "none";
-    cleanups.push(() => {
-      document.body.style.userSelect = "";
-    });
-
-    const rigs: { move: HTMLElement | null; size: HTMLElement | null; prop: "scale" | "transform" }[] = [
-      {
-        move: document.querySelector<HTMLElement>(".sy-phone"),
-        size: document.querySelector<HTMLElement>(".sy-phone > div"),
-        prop: "scale", // Tailwind scale-[...] compiles to the `scale` property
-      },
-      {
-        move: document.querySelector<HTMLElement>(".sy-dash"),
-        size: document.querySelector<HTMLElement>(".sy-dash-inner"),
-        prop: "transform", // GSAP owns a pure scale() matrix here
-      },
-    ];
-
-    rigs.forEach(({ move, size, prop }) => {
-      if (!move || !size) return;
-      move.style.outline = "2px dashed #D12800";
-      move.style.outlineOffset = "4px";
-      cleanups.push(() => {
-        move.style.outline = "";
-        move.style.outlineOffset = "";
-      });
-
-      /* drag anywhere on the mock = move (adjusts the translate components
-         of whatever transform GSAP/Tailwind already left there) */
-      const onDown = (e: PointerEvent) => {
-        if ((e.target as HTMLElement).dataset?.calHandle) return;
-        e.preventDefault();
-        const cs = getComputedStyle(move).transform;
-        const m = cs && cs !== "none" ? new DOMMatrix(cs) : new DOMMatrix();
-        const sx = e.clientX;
-        const sy = e.clientY;
-        const onMove = (ev: PointerEvent) => {
-          const next = DOMMatrix.fromMatrix(m);
-          next.e = m.e + (ev.clientX - sx);
-          next.f = m.f + (ev.clientY - sy);
-          move.style.transform = next.toString();
-        };
-        const onUp = () => {
-          window.removeEventListener("pointermove", onMove);
-          window.removeEventListener("pointerup", onUp);
-        };
-        window.addEventListener("pointermove", onMove);
-        window.addEventListener("pointerup", onUp);
-      };
-      move.addEventListener("pointerdown", onDown);
-      cleanups.push(() => move.removeEventListener("pointerdown", onDown));
-
-      /* red corner dot = uniform resize around the element's own origin */
-      const handle = document.createElement("div");
-      handle.dataset.calHandle = "1";
-      handle.style.cssText =
-        "position:absolute;right:-14px;bottom:-14px;width:28px;height:28px;border-radius:50%;" +
-        "background:#D12800;border:3px solid #fff;box-shadow:0 2px 10px rgba(0,0,0,.35);" +
-        "cursor:nwse-resize;z-index:99;";
-      size.appendChild(handle);
-      cleanups.push(() => handle.remove());
-      const onSizeDown = (e: PointerEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const rect0 = size.getBoundingClientRect();
-        const scale0 = rect0.width / size.offsetWidth;
-        const sx = e.clientX;
-        const onMove = (ev: PointerEvent) => {
-          const k = Math.max(0.12, scale0 * (1 + (ev.clientX - sx) / rect0.width));
-          if (prop === "scale") size.style.scale = String(k);
-          else size.style.transform = `scale(${k})`;
-        };
-        const onUp = () => {
-          window.removeEventListener("pointermove", onMove);
-          window.removeEventListener("pointerup", onUp);
-        };
-        window.addEventListener("pointermove", onMove);
-        window.addEventListener("pointerup", onUp);
-      };
-      handle.addEventListener("pointerdown", onSizeDown);
-      cleanups.push(() => handle.removeEventListener("pointerdown", onSizeDown));
-    });
-
-    return () => {
-      cleanups.forEach((fn) => fn());
-      /* drop manual overrides, then force a full refresh: scrub ticks only
-         re-render tweens around the playhead, so an inline transform left
-         outside their window would survive a plain update */
-      const phoneInner = document.querySelector<HTMLElement>(".sy-phone > div");
-      if (phoneInner) phoneInner.style.scale = "";
-      const dashInner = document.querySelector<HTMLElement>(".sy-dash-inner");
-      if (dashInner) dashInner.style.transform = "";
-      ScrollTrigger.refresh();
-    };
-  }, [on]);
-
-  const actSpan = () => {
-    const act = document.getElementById("act-sync")!;
-    const top = act.getBoundingClientRect().top + window.scrollY;
-    return { top, span: act.offsetHeight - window.innerHeight };
-  };
-
-  const jump = (frac: number) => {
-    const { top, span } = actSpan();
-    window.scrollTo({ top: top + frac * span, behavior: "auto" });
-  };
-
-  const copy = async () => {
-    const { top, span } = actSpan();
-    const progress = +((window.scrollY - top) / span).toFixed(3);
-    const fmt = (el: HTMLElement | null, base?: number) => {
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      return {
-        left: Math.round(r.left),
-        top: Math.round(r.top),
-        width: Math.round(r.width),
-        height: Math.round(r.height),
-        scale: +(r.width / (base ?? el.offsetWidth)).toFixed(3),
-      };
-    };
-    const payload = {
-      viewport: `${window.innerWidth}x${window.innerHeight}@${window.devicePixelRatio}`,
-      phase: progress < 0.58 ? "teaser" : "finale",
-      syncProgress: progress,
-      phone: fmt(document.querySelector<HTMLElement>(".sy-phone > div")),
-      console: fmt(document.querySelector<HTMLElement>(".sy-dash-inner")),
-    };
-    const text = JSON.stringify(payload, null, 2);
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      window.prompt("Clipboard blocked — copy manually:", text);
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1600);
-  };
-
-  return (
-    <div className="pointer-events-none absolute bottom-4 right-4 z-[95] flex flex-col items-end gap-2">
-      {on && (
-        <div className="pointer-events-auto rounded-lg bg-ink/90 px-3 py-2 text-right font-mono text-[11px] leading-relaxed text-white shadow-lg">
-          drag the mock = move · red dot = resize
-          <br />
-          scroll is frozen · Copy BEFORE jumping phases
-        </div>
-      )}
-      <div className="flex gap-2">
-        {on && (
-          <>
-            <button type="button" onClick={() => jump(0.3)} className={TUNE_BTN}>
-              → Teaser
-            </button>
-            <button type="button" onClick={() => jump(0.8)} className={TUNE_BTN}>
-              → Finale
-            </button>
-            <button type="button" onClick={copy} className={TUNE_BTN}>
-              {copied ? "Copied ✓" : "Copy coordinates"}
-            </button>
-          </>
-        )}
-        <button
-          type="button"
-          onClick={() => setOn((v) => !v)}
-          className={`${TUNE_BTN} ${on ? "!bg-[#D12800]" : ""}`}
-        >
-          {on ? "Done" : "🛠 Tune layout"}
-        </button>
-      </div>
-    </div>
-  );
-}
-/* ────────────────────────────────────── end of the temporary calibration rig */
 
 export function ActSync() {
   const root = useRef<HTMLElement>(null);
@@ -234,13 +32,15 @@ export function ActSync() {
       /* The console has two ideal sizes: a compact teaser while it shares
          the stage with the phone and copy, and a near-full-bleed hero once
          it has the stage to itself. Both derive from the real viewport
-         (function-based + invalidateOnRefresh → recomputed on resize). */
+         (function-based + invalidateOnRefresh → recomputed on resize).
+         Teaser geometry is calibrated against Ivan's hand-placed layouts
+         on a 14" MacBook (1500×750) and a 4K monitor (3008×1604). */
       const compactScale = () => {
         const w = window.innerWidth;
         const h = window.innerHeight;
         return w < 1024
           ? Math.min((w * 0.92) / 1280, (h * 0.5) / 840)
-          : Math.min(Math.max((w * 0.55) / 1280, 0.5), (h * 0.62) / 840, 0.85);
+          : Math.min(Math.max((w * 0.55) / 1280, 0.5), (h * 0.62) / 840, 1);
       };
       const bigScale = () => {
         const w = window.innerWidth;
@@ -251,9 +51,13 @@ export function ActSync() {
       const peekX = () => {
         const w = window.innerWidth;
         const visW = 1280 * compactScale();
-        return w < 1024
-          ? Math.max(w - visW * 0.98, w * 0.04)
-          : Math.max(w - visW * 0.86, w * 0.55 + 320);
+        if (w < 1024) return Math.max(w - visW * 0.98, w * 0.04);
+        /* fully on screen when there's room (36px right margin), but never
+           crowding the copy column — overflow the right edge instead (the
+           14" case, where copy + console simply don't both fit) */
+        const cw = Math.min(w, 1500);
+        const copyRight = (w - cw) / 2 + cw * 0.26 + 440;
+        return Math.max(w - visW - 36, copyRight + 36);
       };
       const centerX = () => (window.innerWidth - 1280 * bigScale()) / 2;
       gsap.set(".sy-packet", { autoAlpha: 0 });
@@ -421,9 +225,12 @@ export function ActSync() {
             </h2>
           </div>
 
-          {/* the phone, stage left */}
-          <div className="sy-phone absolute bottom-0 left-1/2 -translate-x-1/2 lg:bottom-[var(--phone-lift,0px)] lg:left-[3%] lg:translate-x-0">
-            <div className="origin-bottom scale-[0.5] sm:scale-[0.7] lg:scale-[calc(var(--phone-scale,1)*0.85)]">
+          {/* the phone, stage left — hugging the copy column from the left
+              (calibrated): left = copy column (26%) minus the phone's visual
+              width (308px × scale, origin-bottom keeps x centered) minus a
+              32px gap; scale rides --phone-scale but stops at 1.36 */}
+          <div className="sy-phone absolute bottom-0 left-1/2 -translate-x-1/2 lg:bottom-[var(--phone-lift,0px)] lg:left-[max(calc(26%-186px-min(var(--phone-scale,1),1.36)*154px),8px)] lg:translate-x-0">
+            <div className="origin-bottom scale-[0.5] sm:scale-[0.7] lg:scale-[min(var(--phone-scale,1),1.36)]">
               <PhoneFrame>
                 <div className="absolute inset-0 isolate">
                   <SyncStatusScreen stage={0} />
@@ -474,8 +281,6 @@ export function ActSync() {
           </div>
         </div>
 
-        {/* TEMPORARY — remove with SyncTuner above */}
-        <SyncTuner />
       </div>
     </section>
   );
