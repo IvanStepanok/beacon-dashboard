@@ -10,6 +10,12 @@ const ANTAKYA = { lat: 36.2021, lng: 36.1601 };
 const STYLE = "https://tiles.openfreemap.org/styles/liberty";
 const SRC = "reports-mvt"; // vector tile source (server-clustered)
 const SEL = "selected-src"; // tiny geojson source for the selection halo
+const SELBLD = "selected-building-src"; // geojson source for the highlighted building footprint
+const OMT_SRC = "openmaptiles"; // basemap (OpenFreeMap Liberty) vector source — OpenMapTiles schema
+const FP_FILL = "footprint-fill";
+const FP_LINE = "footprint-outline";
+const SELBLD_FILL = "selected-building-fill";
+const SELBLD_LINE = "selected-building-outline";
 
 // Tile layer names emitted by the backend ST_AsMVT: 'clusters' (grid counts at
 // low zoom) and 'reports' (latest-per-building points at high zoom). The single
@@ -49,6 +55,9 @@ export function SubmissionsMap({
   onSelectRef.current = onSelect;
   // eslint-disable-next-line react-hooks/refs
   tileUrlRef.current = tileUrl;
+  const selectedIdRef = useRef(selectedId);
+  // eslint-disable-next-line react-hooks/refs
+  selectedIdRef.current = selectedId;
 
   // Create the map once.
   useEffect(() => {
@@ -87,6 +96,52 @@ export function SubmissionsMap({
           maxzoom: 16, // backend emits points for any z>=13; overzoom beyond 16
         });
         map.addSource(SEL, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addSource(SELBLD, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+
+        // Building FOOTPRINT grid from the basemap's OpenMapTiles `building` source-layer —
+        // the same source the reporter app snaps to. Makes the analyst surface honor MH1e:
+        // reports sit ON real building footprints, not bare coordinates. Drawn under the pins;
+        // only added once the basemap vector source is present.
+        if (map.getSource(OMT_SRC)) {
+          map.addLayer({
+            id: FP_FILL,
+            type: "fill",
+            source: OMT_SRC,
+            "source-layer": "building",
+            minzoom: 13,
+            paint: {
+              "fill-color": "#7c8a99",
+              "fill-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0, 15, 0.12, 18, 0.22],
+            },
+          });
+          map.addLayer({
+            id: FP_LINE,
+            type: "line",
+            source: OMT_SRC,
+            "source-layer": "building",
+            minzoom: 14,
+            paint: {
+              "line-color": "#55657a",
+              "line-opacity": 0.7,
+              "line-width": ["interpolate", ["linear"], ["zoom"], 14, 0.4, 17, 1.2],
+            },
+          });
+        }
+
+        // Highlight of the building footprint under the selected report (mirrors the
+        // reporter app's footprint snap). Fed by SELBLD; above the grid, under the pins.
+        map.addLayer({
+          id: SELBLD_FILL,
+          type: "fill",
+          source: SELBLD,
+          paint: { "fill-color": "#006eb5", "fill-opacity": 0.35 },
+        });
+        map.addLayer({
+          id: SELBLD_LINE,
+          type: "line",
+          source: SELBLD,
+          paint: { "line-color": "#006eb5", "line-width": 2.5 },
+        });
 
         const tierMatch = [
           "match",
@@ -199,20 +254,46 @@ export function SubmissionsMap({
     if (vsrc?.setTiles) vsrc.setTiles([tileUrl]);
   }, [tileUrl]);
 
-  // Selection halo follows the parent's selected point.
+  // Selection halo + building-footprint highlight follow the parent's selected point.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !readyRef.current) return;
     const sel = map.getSource(SEL) as GeoJSONSource | undefined;
+    const selBld = map.getSource(SELBLD) as GeoJSONSource | undefined;
+    const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
     if (!sel) return;
+
     if (selectedId && selectedPoint) {
       sel.setData({
         type: "FeatureCollection",
         features: [{ type: "Feature", geometry: { type: "Point", coordinates: [selectedPoint.lng, selectedPoint.lat] }, properties: {} }],
       });
-      map.easeTo({ center: [selectedPoint.lng, selectedPoint.lat], zoom: Math.max(map.getZoom(), 15) });
+      // Zoom in enough for the footprint grid to render, then snap the highlight to the
+      // building polygon under the report.
+      map.easeTo({ center: [selectedPoint.lng, selectedPoint.lat], zoom: Math.max(map.getZoom(), 16) });
+      const wantId = selectedId;
+      const pt = selectedPoint;
+      const highlightBuilding = () => {
+        const m = mapRef.current;
+        if (!m || selectedIdRef.current !== wantId) return; // selection moved on → skip stale
+        if (!m.getLayer(FP_FILL)) { selBld?.setData(EMPTY); return; }
+        const p = m.project([pt.lng, pt.lat]);
+        const feats = m.queryRenderedFeatures(
+          [[p.x - 4, p.y - 4], [p.x + 4, p.y + 4]],
+          { layers: [FP_FILL] },
+        );
+        const geom = feats[0]?.geometry;
+        selBld?.setData(
+          geom
+            ? { type: "FeatureCollection", features: [{ type: "Feature", geometry: geom, properties: {} }] }
+            : EMPTY,
+        );
+      };
+      // Run once the basemap building tiles have settled at the new zoom.
+      map.once("idle", highlightBuilding);
     } else {
-      sel.setData({ type: "FeatureCollection", features: [] });
+      sel.setData(EMPTY);
+      selBld?.setData(EMPTY);
     }
   }, [selectedId, selectedPoint]);
 

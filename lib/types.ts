@@ -102,6 +102,10 @@ export interface Crisis {
   status: CrisisStatus;
   radiusKm: number;
   reportCount: number;
+  // Distinct devices/submitters behind this crisis's reports — the corroboration
+  // signal the emergent threshold is measured against (5 reports from 5 devices
+  // ≫ 5 reports from 1 device). The backend always emits it.
+  distinctSubmitters: number;
   responseId?: string;
   distanceKm?: number;
 }

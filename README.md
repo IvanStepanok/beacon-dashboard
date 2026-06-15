@@ -8,13 +8,11 @@ with JWT auth and role-based UI gating.
 
 | Route | What it is |
 | --- | --- |
-| `/` | **Overview** — crisis-scoped stats, 3-tier damage rollup (+ EMS-98 detail), activity time-series, most-affected areas, recent reports. "Print situation brief" renders a print-only decision-maker summary (browser Save-as-PDF). |
+| `/` | **Overview** — crisis-scoped stats, 3-tier damage rollup, activity time-series, most-affected areas, recent reports. "Print situation brief" renders a print-only decision-maker summary (browser Save-as-PDF). |
 | `/crises` | Crisis registry: active/closed list plus the emergent-proposal review queue (confirm/dismiss, senior roles only). |
-| `/dispatch` | **Verification & triage** — life-safety fast lane, verify/flag with audited decisions (force-verify requires a note), assign/advance/close tasks. |
-| `/map` | **Live map** — clustered report pins, damage/verification/life-safety filters, crisis selector, 30s polling. |
-| `/reports` | Filterable report table with inline detail panel, per-building damage timeline, authenticated photo view. |
-| `/settings` | Global capture scale (tier3 / EMS-98) and on-demand external feed refresh (USGS/GDACS). |
-| `/login` | JWT sign-in; demo accounts are listed on the page. |
+| `/dispatch` | **Verification queue** — triage incoming community reports: verify, hold for review, or flag, with photo-gated audited decisions (force-verify requires a note). Beacon is a situational-awareness dataset, not a responder-dispatch system. |
+| `/map` | **Live map** — clustered report pins, damage/verification filters, crisis selector, 30s polling. |
+| `/reports` | Filterable report table with inline detail panel, per-building damage timeline, authenticated photo view. || `/login` | JWT sign-in; demo accounts are listed on the page. |
 | `/public` | **Community view, no login** — aggregated damage heatmap + area-level counts only. Verified reports, coordinates coarsened to ~110 m by the backend, zoom capped, no individual pins at any zoom. EN/AR toggle (RTL). |
 
 ## Auth & roles
@@ -32,7 +30,7 @@ All calls go through `lib/api.ts`: `api.*` attaches the analyst JWT (401 → tok
 bounce to `/login`); `publicApi.*` deliberately sends **no** Authorization header so the
 backend applies the public anonymous tier. Endpoints used include `/stats/overview`,
 `/reports` (keyset pagination via opaque `nextCursor`), `/reports/export`
-(GeoJSON / HXL-CSV / GeoPackage / PDNA), `/map/features`, `/reports/area-groups` and
+(GeoJSON / HXL-CSV / GeoPackage / Shapefile), `/map/features`, `/reports/area-groups` and
 `/crises/*`. Contract: `backend/openapi.yaml`.
 
 **Why the analyst map uses REST + a truncation banner instead of the MVT tile endpoint:**

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, SectionTitle } from "@/components/ui";
+import { DamageBreakdown } from "@/components/DamageBreakdown";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { crisisTitle, crisisArea } from "@/lib/format";
@@ -101,17 +102,24 @@ export default function CrisesPage() {
                       </span>
                     </div>
                     <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-ink2">
-                      <span className="flex items-center gap-1.5"><Users size={13} className="text-ink3" /> {c.reportCount} reports</span>
+                      {/* Corroboration headline: reports AND the count of distinct
+                          devices behind them — the anti-spam signal (5 reports from 5
+                          devices ≫ 5 from 1) the emergent threshold is measured against. */}
+                      <span className="flex items-center gap-1.5 font-semibold text-ink">
+                        <Users size={13} className="text-primary" />
+                        {c.reportCount} {c.reportCount === 1 ? "report" : "reports"} · {c.distinctSubmitters} {c.distinctSubmitters === 1 ? "reporter" : "reporters"}
+                      </span>
                       <span className="flex items-center gap-1.5"><Clock size={13} className="text-ink3" /> {c.startedAgoHrs}h ago</span>
                       <span className="flex items-center gap-1.5"><MapPin size={13} className="text-ink3" /> ~{Math.round(c.radiusKm)} km radius</span>
                     </div>
+                    <ProposedDamageMini crisisId={c.id} />
                     <div className="mt-4 flex gap-2">
                       <button
                         disabled={busy === c.id || !canMutate}
                         onClick={() => decide(c.id, "active")}
                         className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-ok py-2.5 text-[14px] font-semibold text-white hover:opacity-90 disabled:opacity-50"
                       >
-                        <CheckCircle2 size={16} /> Confirm crisis
+                        <CheckCircle2 size={16} /> Confirm &amp; publish
                       </button>
                       <button
                         disabled={busy === c.id || !canMutate}
@@ -121,7 +129,12 @@ export default function CrisesPage() {
                         <XCircle size={16} /> Dismiss
                       </button>
                     </div>
-                    {!canMutate && <p className="mt-2 text-[12px] text-ink3">Your role can view but not confirm.</p>}
+                    {/* Make the consequence explicit: confirm is the ONLY proposed→active
+                        path, and it publishes the crisis to the public/default scope. */}
+                    <p className="mt-2 text-[12px] text-ink3">
+                      Confirming sets this crisis <span className="font-semibold text-ink2">active</span> and publishes it to responders and the public community view. Until then it stays out of the default map scope.
+                    </p>
+                    {!canMutate && <p className="mt-1 text-[12px] text-ink3">Your role can view but not confirm.</p>}
                   </Card>
                 );
               })}
@@ -175,6 +188,36 @@ export default function CrisesPage() {
           </Card>
         </section>
       </div>
+    </div>
+  );
+}
+
+// ── Per-proposal damage-tier mini-breakdown ───────────────────────────────
+// Lazy-loads the cluster's 3-tier rollup so an analyst sees WHAT the reports
+// claim (mostly minimal vs. complete) before confirming. The needs-review queue
+// is short, so one stats fetch per card is cheap; a failure degrades to nothing.
+function ProposedDamageMini({ crisisId }: { crisisId: string }) {
+  const [tierCounts, setTierCounts] = useState<Record<string, number> | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .statsOverview(crisisId)
+      .then((s) => { if (!cancelled) setTierCounts(s.damageTierCounts ?? {}); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [crisisId]);
+
+  if (!tierCounts) return null;
+  const total = Object.values(tierCounts).reduce((sum, n) => sum + (n ?? 0), 0);
+  if (total === 0) return null;
+
+  return (
+    <div className="mt-3 rounded-xl border border-line bg-surface2/40 p-3">
+      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink3">
+        Damage classification
+      </div>
+      <DamageBreakdown tierCounts={tierCounts} />
     </div>
   );
 }

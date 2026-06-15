@@ -42,9 +42,14 @@ export default function MapPage() {
       if (active.status === "fulfilled") {
         setSelectedCrisis(active.value.id);
       } else {
-        // No active crisis → scope to the busiest crisis that has reports;
-        // only when none qualifies does the map fall back to unscoped.
-        const busiest = [...cs].sort((a, b) => (b.reportCount ?? 0) - (a.reportCount ?? 0))[0];
+        // No active crisis → scope to the busiest ACTIVE crisis that has reports.
+        // A high-report PROPOSED cluster must NOT auto-become the default scope:
+        // proposed clusters no longer auto-activate, so until an analyst confirms
+        // one it stays out of the public/default scope. Analysts can still pick a
+        // proposed crisis manually from the dropdown below.
+        const busiest = [...cs]
+          .filter((c) => c.status === "active")
+          .sort((a, b) => (b.reportCount ?? 0) - (a.reportCount ?? 0))[0];
         if (busiest && (busiest.reportCount ?? 0) > 0) setSelectedCrisis(busiest.id);
       }
       setScopeReady(true);
