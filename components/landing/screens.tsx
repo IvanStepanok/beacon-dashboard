@@ -99,7 +99,7 @@ export function BottomNav({ active }: { active: "map" | "reports" | "profile" })
   );
 }
 
-/* OpenFreeMap Liberty-look basemap of Selmara (fictional): warm land, the
+/* OpenFreeMap Liberty-look basemap of the demo city (fictional): warm land, the
    Sera river, white roads with warm casings, building blocks, park blobs. */
 export function Basemap({ height = 800 }: { height?: number }) {
   return (
@@ -140,7 +140,7 @@ export function Basemap({ height = 800 }: { height?: number }) {
       ].map(([x, fy, w, h], i) => (
         <rect key={`b${i}`} x={x as number} y={height * (fy as number)} width={w as number} height={h as number} rx="1.5" fill="#E7E2D7" transform={`rotate(${(i % 3) * 4 - 4} ${(x as number) + (w as number) / 2} ${height * (fy as number) + (h as number) / 2})`} />
       ))}
-      <text x="186" y={height * 0.37} fontSize="13" fontWeight="500" fill="#8A909B" letterSpacing="0.4">Selmara</text>
+      <text x="186" y={height * 0.37} fontSize="13" fontWeight="500" fill="#8A909B" letterSpacing="0.4">City center</text>
       <text x="40" y={height * 0.81} fontSize="11" fontStyle="italic" fill="#7BA6C2">Sera</text>
     </svg>
   );
@@ -225,7 +225,7 @@ export function MapHomeScreen() {
               Active crisis · Earthquake M 6.4
             </span>
             <span className="block truncate text-[12px] font-medium" style={{ color: C.ink2 }}>
-              Selmara district, Vetra · 4 d ago · UNDP RAPIDA
+              Affected district · 4 d ago · UNDP RAPIDA
             </span>
           </span>
           <span className="grid h-[28px] w-[28px] shrink-0 place-items-center rounded-full">

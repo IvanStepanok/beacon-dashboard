@@ -1,4 +1,4 @@
-/* One source of truth for the Selmara maquette (a fictional quake-struck
+/* One source of truth for the the demo city maquette (a fictional quake-struck
    coastal city): the ground-texture painter
    and the 3D building field both consume this layout, so the map you fly
    over IS the city you land in. All coordinates are meters; the city plane
@@ -174,7 +174,7 @@ export const PARKS: [number, number, number, number][] = [
 /* Toponyms are deliberately fictional — the maquette quotes the geography of
    a Mediterranean quake city without naming a real one. */
 export const LABELS: { x: number; z: number; text: string; size: number; italic?: boolean; water?: boolean }[] = [
-  { x: 700, z: 300, text: "Selmara", size: 30 },
+  { x: 700, z: 300, text: "City center", size: 30 },
   { x: 420, z: 180, text: "Almena", size: 15, italic: true },
   { x: 1120, z: 530, text: "Vessa", size: 15, italic: true },
   { x: 870, z: 480, text: "Kolat", size: 14, italic: true },

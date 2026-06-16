@@ -135,7 +135,7 @@ export function ActOrbit() {
           {/* ── beat 1 · satellites & clouds ── */}
           <div className="orb-beat-1 invisible absolute left-5 opacity-0 top-[16%] max-w-[560px] sm:left-10 lg:left-16 lg:top-1/2 lg:-translate-y-1/2">
             <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-[#FF8A70]">
-              04:17 · Earthquake M 6.4 · Selmara, Vetra Province
+              04:17 · Earthquake M 6.4 · affected district
             </div>
             <h2 className="mt-4 text-[clamp(2rem,4vw,3.4rem)] font-extrabold leading-[1.06] tracking-[-0.02em] text-white">
               Optical satellites need days. And clear skies.
@@ -166,7 +166,7 @@ export function ActOrbit() {
           <div className="orb-hud invisible absolute bottom-12 left-5 font-mono text-[12px] uppercase tracking-[0.18em] text-white/85 opacity-0 sm:left-10 lg:left-16">
             <div className="flex items-center gap-3">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#FF5B3D]" />
-              Descending · Selmara, Vetra Province
+              Descending · affected district
             </div>
             <div className="mt-2 text-[20px] font-bold tabular-nums text-white">
               Alt <span ref={altRef}>700</span> km

@@ -101,7 +101,7 @@ export function DashboardMock() {
             <span className="grid h-[24px] w-[24px] place-items-center rounded-full" style={{ background: C.surface3 }}>
               <User size={13} color={C.ink2} />
             </span>
-            <span className="text-[12px] font-medium" style={{ color: C.ink2 }}>Situation room · Vetra Province</span>
+            <span className="text-[12px] font-medium" style={{ color: C.ink2 }}>Situation room · illustrative scenario</span>
           </span>
         </span>
       </div>
@@ -132,7 +132,7 @@ export function DashboardMock() {
               <span className="h-[8px] w-[8px] rounded-full" style={{ background: C.complete }} />
               <span className="text-[13px] font-semibold" style={{ color: C.ink }}>Earthquake M 6.4</span>
             </span>
-            <span className="block text-[12px] font-medium" style={{ color: C.ink2 }}>Selmara, Vetra</span>
+            <span className="block text-[12px] font-medium" style={{ color: C.ink2 }}>Affected district</span>
           </div>
         </div>
 
@@ -160,7 +160,7 @@ export function DashboardMock() {
             {/* damage map panel */}
             <div className="flex min-h-0 flex-col overflow-hidden rounded-[8px]" style={{ background: C.surface, border: `1px solid ${C.line}` }}>
               <div className="flex items-center justify-between px-[14px] py-[10px]" style={{ borderBottom: `1px solid ${C.line}` }}>
-                <span className="text-[13px] font-semibold" style={{ color: C.ink }}>Damage map — Selmara</span>
+                <span className="text-[13px] font-semibold" style={{ color: C.ink }}>Damage map — affected district</span>
                 <span className="flex" style={{ gap: 6 }}>
                   {["All tiers", "24 h", "Verified only"].map((chip, i) => (
                     <span

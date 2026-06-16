@@ -486,7 +486,7 @@ function OrbitStage() {
   );
 }
 
-/* One canvas, two worlds: the globe (act I) and the Selmara maquette
+/* One canvas, two worlds: the globe (act I) and the the demo city maquette
    (act II). Stage visibility + camera ownership flip on the bridge; the
    handoff between them happens inside the cloud whiteout. */
 export default function OrbitScene() {

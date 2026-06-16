@@ -173,7 +173,7 @@ export function MapOfflineScreen() {
               Offline — map pack active
             </span>
             <span className="block truncate text-[12px] font-medium" style={{ color: C.ink2 }}>
-              Selmara · 18 MB · cached 3 weeks ago
+              Offline area · 18 MB · cached 3 weeks ago
             </span>
           </span>
         </div>

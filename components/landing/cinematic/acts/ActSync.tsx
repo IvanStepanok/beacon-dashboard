@@ -221,7 +221,7 @@ export function ActSync() {
               The situation room
             </div>
             <h2 className="mt-2.5 text-[clamp(1.4rem,2.3vw,2.4rem)] font-extrabold leading-[1.1] tracking-[-0.02em] text-ink">
-              From a street in Selmara to a verified record — in hours, not weeks.
+              From a street to a verified record — in hours, not weeks.
             </h2>
           </div>
 

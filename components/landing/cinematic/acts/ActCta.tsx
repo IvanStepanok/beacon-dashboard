@@ -155,7 +155,7 @@ export function ActCta() {
             on-device output, the plate blur is re-staged in the page. Phone and console
             scenes are HTML recreations of the shipping apps — the film&apos;s dashboard numbers
             come from the 500k load-test scenario, not live data. The M 6.4 timeline is a
-            training scenario: Selmara, its districts and its map are fictional.
+            illustrative training scenario — the city shown here, its districts and its map are fictional.
           </div>
         </div>
       </footer>

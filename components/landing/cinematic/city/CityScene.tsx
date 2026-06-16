@@ -1,6 +1,6 @@
 "use client";
 
-/* ACT II's world: the Selmara maquette. A paper-model city — the ground is
+/* ACT II's world: the the demo city maquette. A paper-model city — the ground is
    the same cartography the orbit act's map promised, the buildings are
    instanced boxes with the damage gradient around the epicenter, and one
    hand-composed hero: the four-floor building with a pancaked wing, rubble,
