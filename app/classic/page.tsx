@@ -321,10 +321,12 @@ export default function LandingPage() {
                   <Smartphone size={17} /> Android — direct APK
                 </a>
                 <a
-                  href="mailto:ivan.stepanok@raccoongang.com?subject=Beacon%20TestFlight%20invite"
+                  href="https://testflight.apple.com/join/bWfHtwev"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="inline-flex items-center gap-2.5 rounded-lg border border-white/25 px-5 py-3 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
                 >
-                  <Smartphone size={17} /> iOS — TestFlight invite
+                  <Smartphone size={17} /> iOS — TestFlight beta
                 </a>
               </div>
               <p className="mt-3 text-[12px] text-white/50">
