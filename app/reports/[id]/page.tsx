@@ -118,7 +118,7 @@ export default function ReportDetailPage({ params }: { params: Promise<{ id: str
                 key={`${API_BASE}${report.photoUrl}`}
                 src={`${API_BASE}${report.photoUrl}`}
                 alt="Reported damage"
-                className="aspect-[4/3] w-full rounded-xl border border-line object-cover"
+                className="max-h-[75vh] w-full rounded-xl border border-line bg-[#f1f5f9] object-contain"
               />
             ) : (
               <div className="flex aspect-[4/3] items-center justify-center rounded-xl border border-line" style={{ backgroundColor: `${damageColor(report.damage)}14` }}>

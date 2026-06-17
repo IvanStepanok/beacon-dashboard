@@ -194,7 +194,7 @@ export function ReportPanel({
 
             {/* photo */}
             {report.photoUrl ? (
-              <AuthImage key={`${API_BASE}${report.photoUrl}`} src={`${API_BASE}${report.photoUrl}`} alt="Reported damage" className="aspect-[4/3] w-full rounded-xl border border-line object-cover" />
+              <AuthImage key={`${API_BASE}${report.photoUrl}`} src={`${API_BASE}${report.photoUrl}`} alt="Reported damage" className="max-h-[60vh] w-full rounded-xl border border-line bg-[#f1f5f9] object-contain" />
             ) : (
               <div className="flex aspect-[4/3] items-center justify-center rounded-xl border border-line" style={{ backgroundColor: `${damageColor(report.damage)}14` }}>
                 <Building2 size={26} style={{ color: damageColor(report.damage) }} />
