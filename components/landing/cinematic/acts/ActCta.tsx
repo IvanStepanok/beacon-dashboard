@@ -6,7 +6,7 @@
 
 import { useRef } from "react";
 import Link from "next/link";
-import { Globe, MonitorCheck, Radar, Smartphone } from "lucide-react";
+import { Globe, MonitorCheck, Smartphone } from "lucide-react";
 import { gsap, useGSAP } from "../gsap";
 
 const SCALE_STATS: [string, number, string, string][] = [
@@ -136,9 +136,7 @@ export function ActCta() {
         <div className="mx-auto flex max-w-[1400px] flex-col gap-6 px-5 py-10 sm:px-10 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-white">
-                <Radar size={16} strokeWidth={2.2} />
-              </span>
+              <img src="/beacon-icon.png" alt="Beacon" className="h-8 w-8 rounded-lg" />
               <span className="text-[15px] font-extrabold tracking-tight">Beacon</span>
             </div>
             <p className="mt-3 max-w-[56ch] text-[13px] leading-relaxed text-white/55">

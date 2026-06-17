@@ -10,7 +10,7 @@
    dm-export (format chips). */
 
 import {
-  FileDown, House, List, Lock, Map as MapIcon, Radar, Send, ShieldCheck, User,
+  FileDown, House, List, Lock, Map as MapIcon, Send, ShieldCheck, User,
 } from "lucide-react";
 import { C, Basemap, TIER_COLOR, TIER_SOFT, TIER_LABEL, type Tier } from "../screens";
 
@@ -87,9 +87,7 @@ export function DashboardMock() {
       {/* app header */}
       <div className="flex h-[52px] items-center justify-between px-[20px]" style={{ background: C.surface, borderBottom: `1px solid ${C.line}` }}>
         <span className="flex items-center" style={{ gap: 10 }}>
-          <span className="grid h-[28px] w-[28px] place-items-center rounded-[8px]" style={{ background: C.primary }}>
-            <Radar size={16} color="#fff" />
-          </span>
+          <img src="/beacon-icon.png" alt="Beacon" className="h-[28px] w-[28px] rounded-[8px]" />
           <span className="text-[14px] font-bold" style={{ color: C.ink }}>Beacon · Analyst console</span>
         </span>
         <span className="flex items-center" style={{ gap: 12 }}>

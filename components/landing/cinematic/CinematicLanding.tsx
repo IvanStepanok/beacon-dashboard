@@ -17,7 +17,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import Link from "next/link";
 import Lenis from "lenis";
-import { Globe, MonitorCheck, Radar } from "lucide-react";
+import { Globe, MonitorCheck } from "lucide-react";
 import { gsap, ScrollTrigger } from "./gsap";
 import { FilmVideo } from "./FilmVideo";
 import { onBridgeChange, orbitBridge } from "./bridge";
@@ -132,9 +132,7 @@ function FilmChrome({ lenisRef }: { lenisRef: RefObject<Lenis | null> }) {
       >
         <div className="mx-auto flex max-w-[1500px] items-center justify-between px-5 py-3.5 sm:px-10">
           <button onClick={() => scrollTo("act-orbit")} className="flex items-center gap-2.5" aria-label="Back to top">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white">
-              <Radar size={19} strokeWidth={2.2} />
-            </span>
+            <img src="/beacon-icon.png" alt="Beacon" className="h-9 w-9 rounded-xl" />
             <span className={`text-[17px] font-extrabold tracking-tight transition-colors duration-300 ${headerDark ? "text-white" : "text-ink"}`}>
               Beacon
             </span>
@@ -332,9 +330,7 @@ export default function CinematicLanding() {
         >
           <div className="flex flex-col items-center gap-8">
             <div className="flex items-center gap-3">
-              <span className="grid h-11 w-11 place-items-center rounded-xl bg-primary text-white">
-                <Radar size={23} strokeWidth={2.2} />
-              </span>
+              <img src="/beacon-icon.png" alt="Beacon" className="h-11 w-11 rounded-xl" />
               <span className="text-[22px] font-extrabold tracking-tight text-white">Beacon</span>
             </div>
             <span className="h-12 w-12 animate-spin rounded-full border-[3px] border-white/15 border-t-white" />

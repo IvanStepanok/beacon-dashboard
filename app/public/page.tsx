@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Radar, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { PublicHeatmap } from "@/components/PublicHeatmap";
 import { publicApi, type MapFeatureCollection } from "@/lib/api";
 import { crisisTitle } from "@/lib/format";
@@ -130,9 +130,7 @@ export default function PublicCommunityPage() {
       {/* Header */}
       <div className="absolute inset-x-0 top-0 z-10 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line bg-surface/95 px-5 py-3 backdrop-blur">
         <div className="flex items-center gap-2.5">
-          <div className="grid h-9 w-9 place-items-center rounded-2xl bg-primary text-white shadow-sm shadow-primary/30">
-            <Radar size={20} strokeWidth={2.2} />
-          </div>
+          <img src="/beacon-icon.png" alt="Beacon" className="h-9 w-9 rounded-2xl shadow-sm shadow-primary/30" />
           <div className="leading-tight">
             <div className="text-[16px] font-bold tracking-tight text-ink">{t.brand}</div>
             <div className="text-[11px] font-medium uppercase tracking-wider text-ink3">{t.pageTitle}</div>

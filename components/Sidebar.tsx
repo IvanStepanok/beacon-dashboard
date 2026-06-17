@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
-  Radar,
   LayoutDashboard,
   Map as MapIcon,
   ClipboardList,
@@ -42,9 +41,7 @@ export function Sidebar() {
   return (
     <aside className="sticky top-0 flex h-screen w-64 shrink-0 flex-col border-r border-line bg-surface print:hidden">
       <div className="flex items-center gap-3 px-5 pt-6 pb-5">
-        <div className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-white shadow-sm shadow-primary/30">
-          <Radar size={22} strokeWidth={2.2} />
-        </div>
+        <img src="/beacon-icon.png" alt="Beacon" className="h-10 w-10 rounded-2xl shadow-sm shadow-primary/30" />
         <div className="leading-tight">
           <div className="text-[17px] font-bold tracking-tight text-ink">Beacon</div>
           <div className="text-[11px] font-medium uppercase tracking-wider text-ink3">

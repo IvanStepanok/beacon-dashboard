@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Radar, Globe } from "lucide-react";
+import { Globe } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 const DEMO = [
@@ -36,9 +36,7 @@ export default function LoginPage() {
     <div className="grid min-h-screen place-items-center bg-bg px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 flex items-center gap-3">
-          <div className="grid h-11 w-11 place-items-center rounded-2xl bg-primary text-white shadow-sm shadow-primary/30">
-            <Radar size={24} strokeWidth={2.2} />
-          </div>
+          <img src="/beacon-icon.png" alt="Beacon" className="h-11 w-11 rounded-2xl shadow-sm shadow-primary/30" />
           <div className="leading-tight">
             <div className="text-[19px] font-bold tracking-tight text-ink">Beacon</div>
             <div className="text-[11px] font-medium uppercase tracking-wider text-ink3">Analyst Console</div>

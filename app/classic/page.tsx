@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Radar, Globe, MonitorCheck, ArrowRight, Smartphone } from "lucide-react";
+import { Globe, MonitorCheck, ArrowRight, Smartphone } from "lucide-react";
 import { PhoneFrame } from "@/components/landing/PhoneFrame";
 import { StoryScroll, Reveal, type StoryBeat } from "@/components/landing/StoryScroll";
 import { MapHomeScreen, CaptureDamageScreen, ReportsScreen, ReportDetailScreen } from "@/components/landing/screens";
@@ -79,9 +79,7 @@ export default function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-line bg-white/85 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] items-center gap-6 px-5 py-3 sm:px-10">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white">
-              <Radar size={19} strokeWidth={2.2} />
-            </span>
+            <img src="/beacon-icon.png" alt="Beacon" className="h-9 w-9 rounded-xl" />
             <span className="text-[17px] font-extrabold tracking-tight text-ink">Beacon</span>
           </Link>
           <nav className="ml-4 hidden items-center gap-5 text-[13.5px] font-medium text-ink2 md:flex">
@@ -368,9 +366,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-[1400px] flex-col gap-6 px-5 sm:px-10 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-primary text-white">
-                <Radar size={16} strokeWidth={2.2} />
-              </span>
+              <img src="/beacon-icon.png" alt="Beacon" className="h-8 w-8 rounded-lg" />
               <span className="text-[15px] font-extrabold tracking-tight">Beacon</span>
             </div>
             <p className="mt-3 max-w-[52ch] text-[13px] leading-relaxed text-white/60">
