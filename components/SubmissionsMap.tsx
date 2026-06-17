@@ -16,6 +16,9 @@ const FP_FILL = "footprint-fill";
 const FP_LINE = "footprint-outline";
 const SELBLD_FILL = "selected-building-fill";
 const SELBLD_LINE = "selected-building-outline";
+const BLD_SRC = "buildings-mvt"; // authoritative footprint vector tiles (backend /tiles/buildings)
+const BLD_FILL = "auth-footprint-fill";
+const BLD_LINE = "auth-footprint-outline";
 
 // Tile layer names emitted by the backend ST_AsMVT: 'clusters' (grid counts at
 // low zoom) and 'reports' (latest-per-building points at high zoom). The single
@@ -55,6 +58,12 @@ export function SubmissionsMap({
   onSelectRef.current = onSelect;
   // eslint-disable-next-line react-hooks/refs
   tileUrlRef.current = tileUrl;
+  // The authoritative-footprint tile template is the reports template with the path
+  // segment swapped; it carries the same crisisId (the buildings endpoint ignores the
+  // damage/verification filter params).
+  const buildingTileUrlRef = useRef(tileUrl.replace("/tiles/reports/", "/tiles/buildings/"));
+  // eslint-disable-next-line react-hooks/refs
+  buildingTileUrlRef.current = tileUrl.replace("/tiles/reports/", "/tiles/buildings/");
   const selectedIdRef = useRef(selectedId);
   // eslint-disable-next-line react-hooks/refs
   selectedIdRef.current = selectedId;
@@ -97,6 +106,9 @@ export function SubmissionsMap({
         });
         map.addSource(SEL, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
         map.addSource(SELBLD, { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        // Authoritative footprint vector tiles (backend /tiles/buildings). Public endpoint;
+        // the analyst JWT still rides via transformRequest. setTiles re-points on crisis change.
+        map.addSource(BLD_SRC, { type: "vector", tiles: [buildingTileUrlRef.current], minzoom: 0, maxzoom: 16 });
 
         // Building FOOTPRINT grid from the basemap's OpenMapTiles `building` source-layer —
         // the same source the reporter app snaps to. Makes the analyst surface honor MH1e:
@@ -127,6 +139,33 @@ export function SubmissionsMap({
             },
           });
         }
+
+        // Authoritative building FOOTPRINTS from the backend (/tiles/buildings): real
+        // polygons + source ids ingested per AOI (OSM / Open Buildings / gov shapefile),
+        // drawn above the basemap grid so where they exist they read as the real ones.
+        map.addLayer({
+          id: BLD_FILL,
+          type: "fill",
+          source: BLD_SRC,
+          "source-layer": "buildings",
+          minzoom: 13,
+          paint: {
+            "fill-color": "#0a7d8c",
+            "fill-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0, 15, 0.18, 18, 0.3],
+          },
+        });
+        map.addLayer({
+          id: BLD_LINE,
+          type: "line",
+          source: BLD_SRC,
+          "source-layer": "buildings",
+          minzoom: 14,
+          paint: {
+            "line-color": "#0a7d8c",
+            "line-opacity": 0.9,
+            "line-width": ["interpolate", ["linear"], ["zoom"], 14, 0.6, 17, 1.6],
+          },
+        });
 
         // Highlight of the building footprint under the selected report (mirrors the
         // reporter app's footprint snap). Fed by SELBLD; above the grid, under the pins.
@@ -252,6 +291,8 @@ export function SubmissionsMap({
     // VectorTileSource.setTiles swaps the template and refreshes in place (no remount).
     const vsrc = src as unknown as { setTiles?: (u: string[]) => void } | undefined;
     if (vsrc?.setTiles) vsrc.setTiles([tileUrl]);
+    const bsrc = map.getSource(BLD_SRC) as unknown as { setTiles?: (u: string[]) => void } | undefined;
+    bsrc?.setTiles?.([tileUrl.replace("/tiles/reports/", "/tiles/buildings/")]);
   }, [tileUrl]);
 
   // Selection halo + building-footprint highlight follow the parent's selected point.
@@ -276,11 +317,13 @@ export function SubmissionsMap({
       const highlightBuilding = () => {
         const m = mapRef.current;
         if (!m || selectedIdRef.current !== wantId) return; // selection moved on → skip stale
-        if (!m.getLayer(FP_FILL)) { selBld?.setData(EMPTY); return; }
+        // Prefer the authoritative footprint (BLD_FILL, on top) over the basemap grid (FP_FILL).
+        const fpLayers = [BLD_FILL, FP_FILL].filter((l) => m.getLayer(l));
+        if (fpLayers.length === 0) { selBld?.setData(EMPTY); return; }
         const p = m.project([pt.lng, pt.lat]);
         const feats = m.queryRenderedFeatures(
           [[p.x - 4, p.y - 4], [p.x + 4, p.y + 4]],
-          { layers: [FP_FILL] },
+          { layers: fpLayers },
         );
         const geom = feats[0]?.geometry;
         selBld?.setData(
